@@ -94,7 +94,7 @@ fi
 module load miniforge/24.11.3-py3.12 2>/dev/null
 if ! conda env list | grep -q "rnaseq_r"; then
     echo "WARNING: Conda environment 'rnaseq_r' not found!"
-    echo "Step 7 (DESeq2) will fail without it."
+    echo "Step 10 (DESeq2) will fail without it."
     echo ""
     echo "To create the environment:"
     echo "  module load miniforge/24.11.3-py3.12"
@@ -137,7 +137,7 @@ if [[ "$RESUME" == true ]] && check_step_complete 2; then
 else
     DEP_STRING=""
     [[ "$JOB1" != "completed" ]] && DEP_STRING="--dependency=afterok:$JOB1"
-    JOB2=$(sbatch --parsable --account=${SLURM_ACCOUNT} $DEP_STRING 02_multiqc_raw.slurm)
+    JOB2=$(sbatch --parsable --account=${SLURM_ACCOUNT} ${DEP_STRING} 02_multiqc_raw.slurm)
     if [[ "$JOB1" == "completed" ]]; then
         echo "Step 2 (MultiQC raw): Job ID $JOB2"
     else
@@ -145,19 +145,13 @@ else
     fi
 fi
 
-# Submit Step 3: Trimmomatic (depends on MultiQC raw completion, can start after QC verification)
+# Submit Step 3: Trimmomatic (no dependency - raw data should already exist)
 if [[ "$RESUME" == true ]] && check_step_complete 3; then
     echo "Step 3 (Trimmomatic): ✓ ALREADY COMPLETE (skipping)"
     JOB3="completed"
 else
-    DEP_STRING=""
-    [[ "$JOB2" != "completed" ]] && DEP_STRING="--dependency=afterok:$JOB2"
-    JOB3=$(sbatch --parsable --account=${SLURM_ACCOUNT} $DEP_STRING 03_trimmomatic.slurm)
-    if [[ "$JOB2" == "completed" ]]; then
-        echo "Step 3 (Trimmomatic): Job ID $JOB3 - 42 array tasks"
-    else
-        echo "Step 3 (Trimmomatic): Job ID $JOB3 (waits for $JOB2) - 42 array tasks"
-    fi
+    JOB3=$(sbatch --parsable --account=${SLURM_ACCOUNT} 03_trimmomatic.slurm)
+    echo "Step 3 (Trimmomatic): Job ID $JOB3 - 42 array tasks"
 fi
 
 # Submit Step 4: FastQC trimmed (depends on Trimmomatic)
@@ -167,7 +161,7 @@ if [[ "$RESUME" == true ]] && check_step_complete 4; then
 else
     DEP_STRING=""
     [[ "$JOB3" != "completed" ]] && DEP_STRING="--dependency=afterok:$JOB3"
-    JOB4=$(sbatch --parsable --account=${SLURM_ACCOUNT} $DEP_STRING 04_fastqc_trimmed.slurm)
+    JOB4=$(sbatch --parsable --account=${SLURM_ACCOUNT} ${DEP_STRING} 04_fastqc_trimmed.slurm)
     if [[ "$JOB3" == "completed" ]]; then
         echo "Step 4 (FastQC trimmed): Job ID $JOB4"
     else
@@ -182,7 +176,7 @@ if [[ "$RESUME" == true ]] && check_step_complete 5; then
 else
     DEP_STRING=""
     [[ "$JOB4" != "completed" ]] && DEP_STRING="--dependency=afterok:$JOB4"
-    JOB5=$(sbatch --parsable --account=${SLURM_ACCOUNT} $DEP_STRING 05_multiqc_trimmed.slurm)
+    JOB5=$(sbatch --parsable --account=${SLURM_ACCOUNT} ${DEP_STRING} 05_multiqc_trimmed.slurm)
     if [[ "$JOB4" == "completed" ]]; then
         echo "Step 5 (MultiQC trimmed): Job ID $JOB5"
     else
@@ -197,7 +191,7 @@ if [[ "$RESUME" == true ]] && check_step_complete 6; then
 else
     DEP_STRING=""
     [[ "$JOB0" != "completed" ]] && DEP_STRING="--dependency=afterok:$JOB0"
-    JOB6=$(sbatch --parsable --account=${SLURM_ACCOUNT} $DEP_STRING 06_build_star_index.slurm)
+    JOB6=$(sbatch --parsable --account=${SLURM_ACCOUNT} ${DEP_STRING} 06_build_star_index.slurm)
     if [[ "$JOB0" == "completed" ]]; then
         echo "Step 6 (STAR index): Job ID $JOB6"
     else
@@ -216,10 +210,10 @@ else
     [[ "$JOB3" != "completed" ]] && DEP_JOBS+=("$JOB3")
     
     if [[ ${#DEP_JOBS[@]} -gt 0 ]]; then
-        DEP_STRING="--dependency=afterok:$(IFS=:; echo "${DEP_JOBS[*]}" | sed 's/:/:afterok:/g')"
+        DEP_STRING="--dependency=afterok:$(IFS=:; echo "${DEP_JOBS[*]}")"
     fi
     
-    JOB7=$(sbatch --parsable --account=${SLURM_ACCOUNT} $DEP_STRING 07_star_align.slurm)
+    JOB7=$(sbatch --parsable --account=${SLURM_ACCOUNT} ${DEP_STRING} 07_star_align.slurm)
     if [[ ${#DEP_JOBS[@]} -eq 0 ]]; then
         echo "Step 7 (STAR align): Job ID $JOB7 - 42 array tasks"
     else
@@ -234,7 +228,7 @@ if [[ "$RESUME" == true ]] && check_step_complete 8; then
 else
     DEP_STRING=""
     [[ "$JOB7" != "completed" ]] && DEP_STRING="--dependency=afterok:$JOB7"
-    JOB8=$(sbatch --parsable --account=${SLURM_ACCOUNT} $DEP_STRING 08_multiqc_alignment.slurm)
+    JOB8=$(sbatch --parsable --account=${SLURM_ACCOUNT} ${DEP_STRING} 08_multiqc_alignment.slurm)
     if [[ "$JOB7" == "completed" ]]; then
         echo "Step 8 (MultiQC align): Job ID $JOB8"
     else
@@ -249,7 +243,7 @@ if [[ "$RESUME" == true ]] && check_step_complete 9; then
 else
     DEP_STRING=""
     [[ "$JOB7" != "completed" ]] && DEP_STRING="--dependency=afterok:$JOB7"
-    JOB9=$(sbatch --parsable --account=${SLURM_ACCOUNT} $DEP_STRING 09_featureCounts.slurm)
+    JOB9=$(sbatch --parsable --account=${SLURM_ACCOUNT} ${DEP_STRING} 09_featureCounts.slurm)
     if [[ "$JOB7" == "completed" ]]; then
         echo "Step 9 (featureCounts): Job ID $JOB9"
     else
@@ -264,7 +258,7 @@ if [[ "$RESUME" == true ]] && check_step_complete 10; then
 else
     DEP_STRING=""
     [[ "$JOB9" != "completed" ]] && DEP_STRING="--dependency=afterok:$JOB9"
-    JOB10=$(sbatch --parsable --account=${SLURM_ACCOUNT} $DEP_STRING 10_run_deseq2.slurm)
+    JOB10=$(sbatch --parsable --account=${SLURM_ACCOUNT} ${DEP_STRING} 10_run_deseq2.slurm)
     if [[ "$JOB9" == "completed" ]]; then
         echo "Step 10 (DESeq2): Job ID $JOB10"
     else
@@ -295,10 +289,11 @@ if [[ $SKIPPED -gt 0 ]]; then
 fi
 
 echo "Job dependency chain:"
-echo "  QC Track: FastQC raw ($JOB1) → MultiQC raw ($JOB2) → Trimmomatic ($JOB3) → FastQC trimmed ($JOB4) → MultiQC trimmed ($JOB5)"
+echo "  Raw QC Track: FastQC raw ($JOB1) → MultiQC raw ($JOB2)"
+echo "  Trimming Track: Trimmomatic ($JOB3) → FastQC trimmed ($JOB4) → MultiQC trimmed ($JOB5)"
 echo "  Index Track: Download ref ($JOB0) → STAR index ($JOB6)"
-echo "  Main Track: STAR align ($JOB7, waits for $JOB6+$JOB3) → featureCounts ($JOB9) → DESeq2 ($JOB10)"
-echo "  QC Track: Alignment ($JOB7) → MultiQC align ($JOB8)"
+echo "  Alignment Track: STAR align ($JOB7, waits for $JOB6+$JOB3) → featureCounts ($JOB9) → DESeq2 ($JOB10)"
+echo "  Alignment QC: STAR align ($JOB7) → MultiQC align ($JOB8)"
 echo ""
 echo "  (Note: 'completed' = skipped because already done)"
 echo ""
