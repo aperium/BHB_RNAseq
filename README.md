@@ -19,9 +19,19 @@ This pipeline is version-controlled on GitHub for easy deployment to UVA HPC.
    git clone https://github.com/aperium/BHB_RNAseq.git
    ```
 
-2. **Complete setup**: Follow instructions in `SETUP_INSTRUCTIONS.md`
+2. **Find your HPC allocation account** (required for all job submissions):
+   ```bash
+   allocations
+   ```
 
-3. **Run the pipeline**: See Quick Start section below
+3. **Set the SLURM_ACCOUNT environment variable**:
+   ```bash
+   export SLURM_ACCOUNT=your_account_name
+   ```
+
+4. **Complete setup**: Follow instructions in `SETUP_INSTRUCTIONS.md`
+
+5. **Run the pipeline**: See Quick Start section below
 
 For detailed transfer instructions from local machine or GitHub, see `TRANSFER_CHECKLIST.md`.
 
@@ -76,9 +86,43 @@ sbatch 00_download_reference.slurm
 
 ## Quick Start
 
+**Important**: All `sbatch` commands require specifying your HPC allocation account. First, set the `SLURM_ACCOUNT` variable:
+
+```bash
+# Find your account name(s)
+allocations
+
+# Set the SLURM_ACCOUNT variable (replace with your actual account)
+export SLURM_ACCOUNT=your_account_name
+```
+
+Replace `your_account_name` with your actual HPC allocation
+
+**Example workflow:**
+```bash
+# First time: Find your account
+allocations
+
+# Set the variable for your session
+export SLURM_ACCOUNT=your_account_name
+
+# Now submit jobs using that account
+sbatch --account=${SLURM_ACCOUNT} 00_download_reference.slurm
+sbatch --account=${SLURM_ACCOUNT} 01_fastqc_raw.slurm
+# ... and so on
+```
+
 ### Option 1: Run Entire Pipeline Automatically
 ```bash
 cd /scratch/$USER/BHB_complete/BHB_RNAseq
+
+# Set your account (if not already set)
+export SLURM_ACCOUNT=your_account_name
+
+# Run with account specified
+bash run_full_pipeline.sh ${SLURM_ACCOUNT}
+
+# Or let it default to $USER (if your account matches your username)
 bash run_full_pipeline.sh
 ```
 This submits all 11 steps with job dependencies. Jobs will run automatically as dependencies complete (~8-10 hours total).
@@ -90,25 +134,25 @@ This submits all 11 steps with job dependencies. Jobs will run automatically as 
 ### Step 0: Download Reference Genome
 ```bash
 cd /scratch/$USER/BHB_complete/BHB_RNAseq
-sbatch 00_download_reference.slurm
+sbatch --account=${SLURM_ACCOUNT} 00_download_reference.slurm
 ```
 Downloads *S. cerevisiae* R64-1-1 genome (Ensembl release 113), GTF annotation, and ERCC92 spike-in references. Combines them into unified reference files for alignment.
 
 ### Step 1: Quality Control - Raw Reads
 ```bash
-sbatch 01_fastqc_raw.slurm
+sbatch --account=${SLURM_ACCOUNT} 01_fastqc_raw.slurm
 ```
 Runs FastQC on all raw FASTQ files to assess read quality.
 
 ### Step 2: Aggregate QC Reports - Raw
 ```bash
-sbatch 02_multiqc_raw.slurm
+sbatch --account=${SLURM_ACCOUNT} 02_multiqc_raw.slurm
 ```
 Creates a MultiQC report summarizing FastQC results for raw reads across all samples.
 
 ### Step 3: Quality Trimming with Trimmomatic
 ```bash
-sbatch 03_trimmomatic.slurm
+sbatch --account=${SLURM_ACCOUNT} 03_trimmomatic.slurm
 ```
 Array job (1-42) that performs quality trimming and adapter removal on all samples in parallel:
 - **Adapter removal**: NextSeq/TruSeq adapters for NovaSeq platform
@@ -120,13 +164,13 @@ Output: `../02.TrimmedData/*_R1_paired.fastq.gz` and `*_R2_paired.fastq.gz`
 
 ### Step 4: Quality Control - Trimmed Reads
 ```bash
-sbatch 04_fastqc_trimmed.slurm
+sbatch --account=${SLURM_ACCOUNT} 04_fastqc_trimmed.slurm
 ```
 Runs FastQC on all trimmed FASTQ files to verify trimming improved quality.
 
 ### Step 5: Aggregate QC Reports - Trimmed
 ```bash
-sbatch 05_multiqc_trimmed.slurm
+sbatch --account=${SLURM_ACCOUNT} 05_multiqc_trimmed.slurm
 ```
 Creates MultiQC report for trimmed reads. Compare with raw reads report to confirm quality improvement.
 
@@ -134,13 +178,13 @@ Creates MultiQC report for trimmed reads. Compare with raw reads report to confi
 
 ### Step 6: Build STAR Index
 ```bash
-sbatch 06_build_star_index.slurm
+sbatch --account=${SLURM_ACCOUNT} 06_build_star_index.slurm
 ```
 Builds STAR genome index with combined yeast + ERCC reference, optimized for yeast genome size. Can run in parallel with QC/trimming steps.
 
 ### Step 7: Align Reads with STAR
 ```bash
-sbatch 07_star_align.slurm
+sbatch --account=${SLURM_ACCOUNT} 07_star_align.slurm
 ```
 Array job (1-42) that aligns all **trimmed** samples in parallel. Each sample gets:
 - Sorted BAM file
@@ -150,13 +194,13 @@ Array job (1-42) that aligns all **trimmed** samples in parallel. Each sample ge
 
 ### Step 8: Aggregate Alignment QC
 ```bash
-sbatch 08_multiqc_alignment.slurm
+sbatch --account=${SLURM_ACCOUNT} 08_multiqc_alignment.slurm
 ```
 Creates MultiQC report for alignment statistics (alignment rate, uniqueness, etc.).
 
 ### Step 9: Create Count Matrix
 ```bash
-sbatch 09_featureCounts.slurm
+sbatch --account=${SLURM_ACCOUNT} 09_featureCounts.slurm
 ```
 Extracts gene counts from STAR output and creates a combined count matrix.
 
@@ -172,7 +216,7 @@ conda create -y -n rnaseq_r -c conda-forge -c bioconda \
 
 # Then run DESeq2 (from BHB_RNAseq directory)
 cd /scratch/$USER/BHB_complete/BHB_RNAseq
-sbatch 10_run_deseq2.slurm
+sbatch --account=${SLURM_ACCOUNT} 10_run_deseq2.slurm
 ```
 
 Performs differential expression analysis using DESeq2 with ERCC normalization:
@@ -242,14 +286,17 @@ squeue -u $USER
 squeue -j JOBID
 
 # View recent log (from BHB_RNAseq directory)
-tail -f ../logs/04_star_align_JOBID_ARRAYID.out
+tail -f ../logs/03_trimmomatic_JOBID.out
 
 # Or from logs directory
 cd /scratch/$USER/BHB_complete/logs
-tail -f 04_star_align_JOBID_ARRAYID.out
+tail -f 03_trimmomatic_JOBID.out
 
 # Cancel a job
 scancel JOBID
+
+# Check your account's remaining allocation
+allocations
 ```
 
 ## Expected Runtime

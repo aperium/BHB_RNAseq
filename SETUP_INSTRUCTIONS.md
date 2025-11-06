@@ -6,6 +6,44 @@
 
 This pipeline is version-controlled on GitHub. You can clone it directly to HPC or transfer from a local copy.
 
+## ⚠️ Important: HPC Account Requirement
+
+**All SLURM job submissions require specifying an allocation account.**
+
+Before running any pipeline steps, find your account name and set the `SLURM_ACCOUNT` variable:
+
+```bash
+# Find your account name(s)
+allocations
+
+# Set the SLURM_ACCOUNT environment variable (replace with your actual account)
+export SLURM_ACCOUNT=your_account_name
+```
+
+Common account names at UVA HPC include: `berglandlab`, `bii_dsi_community`, etc.
+
+Then use `--account=${SLURM_ACCOUNT}` with every `sbatch` command:
+
+```bash
+sbatch --account=${SLURM_ACCOUNT} script.slurm
+```
+
+If you don't have an account, contact your PI or email `hpc-support@virginia.edu`.
+
+### Optional: Make It Permanent
+
+To avoid setting `SLURM_ACCOUNT` every time you log in, add it to your `~/.bashrc`:
+
+```bash
+# Add to your ~/.bashrc file (replace with your actual account)
+echo 'export SLURM_ACCOUNT=your_account_name' >> ~/.bashrc
+source ~/.bashrc
+
+# Now the variable will be set automatically in every new session
+```
+
+**Note**: If you work with multiple accounts, you may want to set `SLURM_ACCOUNT` manually each session to avoid confusion.
+
 ## Initial Setup (One-Time)
 
 ### 1. Get Pipeline Files on HPC
@@ -21,6 +59,9 @@ cd /scratch/$USER/BHB_complete
 
 # Clone the repository
 git clone https://github.com/aperium/BHB_RNAseq.git
+
+# OR pull the latest version
+git pull
 
 # This creates: /scratch/$USER/BHB_complete/BHB_RNAseq/
 ```
@@ -148,6 +189,28 @@ module purge
 
 ## Running the Pipeline
 
+### Setting Up Your Account Variable
+
+**IMPORTANT**: All SLURM job submissions require the `SLURM_ACCOUNT` environment variable.
+
+```bash
+# Check your available allocations
+allocations
+
+# This will show something like:
+# Account: your_account_name
+# Available SUs: 50000
+
+# Set the variable (replace with your actual account name)
+export SLURM_ACCOUNT=berglandlab
+```
+
+Use `--account=${SLURM_ACCOUNT}` in all `sbatch` commands:
+
+```bash
+sbatch --account=${SLURM_ACCOUNT} script.slurm
+```
+
 ### Option 1: Automated Full Pipeline (Recommended)
 
 Submit all jobs at once with automatic dependencies:
@@ -157,11 +220,13 @@ Submit all jobs at once with automatic dependencies:
 ssh $USER@login.hpc.virginia.edu
 cd /scratch/$USER/BHB_complete/BHB_RNAseq
 
-# Update these with your User ID and UPC Account
-export HPC_ACCOUNT="your_slurm_account_name"
-export USER="your_user_ID"
+# Set your account variable (if not already set)
+export SLURM_ACCOUNT=your_account_name
 
-# Run master submission script
+# Run master submission script (passes account to all sbatch commands)
+bash run_full_pipeline.sh ${SLURM_ACCOUNT}
+
+# Or let it default to $USER (if your account matches your username)
 bash run_full_pipeline.sh
 ```
 
@@ -179,49 +244,54 @@ watch -n 60 'squeue -u $USER'
 ssh $USER@login.hpc.virginia.edu
 cd /scratch/$USER/BHB_complete/BHB_RNAseq
 
+# Find your account name first!
+allocations
+
+# Set your account variable first!
+export SLURM_ACCOUNT=your_account_name
+
 # All scripts should be run from the BHB_RNAseq directory
 # Logs will be written to ../logs/ (one level up)
 
 # Step 0: Download reference
-sbatch 00_download_reference.slurm
+sbatch --account=${SLURM_ACCOUNT} 00_download_reference.slurm
 # Wait for completion, check: squeue -u $USER
 
 # Step 1: QC raw reads
-sbatch 01_fastqc_raw.slurm
+sbatch --account=${SLURM_ACCOUNT} 01_fastqc_raw.slurm
 
 # Step 2: Aggregate QC
-sbatch 02_multiqc_raw.slurm
+sbatch --account=${SLURM_ACCOUNT} 02_multiqc_raw.slurm
 # Review: ../03.FastQC_raw/multiqc_raw_report.html
 
 # Step 3: Quality trimming
-sbatch 03_trimmomatic.slurm
-# This launches 42 parallel trimming jobs (one per sample)
+sbatch --account=${SLURM_ACCOUNT} 03_trimmomatic.slurm
 
 # Step 4: QC trimmed reads
-sbatch 04_fastqc_trimmed.slurm
+sbatch --account=${SLURM_ACCOUNT} 04_fastqc_trimmed.slurm
 
 # Step 5: Aggregate QC for trimmed reads
-sbatch 05_multiqc_trimmed.slurm
+sbatch --account=${SLURM_ACCOUNT} 05_multiqc_trimmed.slurm
 # Review: ../02.TrimmedData/multiqc_trimmed_report.html
 
 # Step 6: Build STAR index
-sbatch 06_build_star_index.slurm
+sbatch --account=${SLURM_ACCOUNT} 06_build_star_index.slurm
 
-# Step 7: Align reads (this will launch 42 parallel jobs)
-sbatch 07_star_align.slurm
+# Step 7: Align reads
+sbatch --account=${SLURM_ACCOUNT} 07_star_align.slurm
 
 # Monitor array job progress:
 squeue -u $USER
 watch -n 60 'squeue -u $USER'  # Updates every 60 seconds
 
 # Step 8: Aggregate alignment QC
-sbatch 08_multiqc_alignment.slurm
+sbatch --account=${SLURM_ACCOUNT} 08_multiqc_alignment.slurm
 
 # Step 9: Create count matrix
-sbatch 09_featureCounts.slurm
+sbatch --account=${SLURM_ACCOUNT} 09_featureCounts.slurm
 
 # Step 10: DESeq2 analysis
-sbatch 10_run_deseq2.slurm
+sbatch --account=${SLURM_ACCOUNT} 10_run_deseq2.slurm
 ```
 
 
@@ -263,6 +333,16 @@ tail -f ../logs/04_star_align_JOBID_TASKID.out
 ```
 
 ### Common Issues
+
+**Issue**: Job submission fails with "Account not specified" or "Invalid account"
+
+```bash
+# Check your available accounts
+allocations
+
+# If no accounts are shown, request access:
+# Contact your PI or email hpc-support@virginia.edu
+```
 
 **Issue**: Array job task fails to find FASTQ files
 
@@ -423,6 +503,13 @@ If jobs fail due to memory/time, edit the SLURM directives:
 ## Quick Reference Card
 
 ```bash
+# IMPORTANT: Set your account variable first!
+allocations
+export SLURM_ACCOUNT=your_account_name
+
+# Submit a job (use --account=${SLURM_ACCOUNT})
+sbatch --account=${SLURM_ACCOUNT} script.slurm
+
 # Check queue
 squeue -u $USER
 
