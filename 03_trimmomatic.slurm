@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=10
-#SBATCH --mem=20G
+#SBATCH --mem=32G
 #SBATCH --time=10:00:00
 #SBATCH --partition=standard
 #SBATCH --output=../logs/03_trimmomatic_%j.out
@@ -79,7 +79,7 @@ for SAMPLE in "${SAMPLES[@]}"; do
     
     # Run Trimmomatic in paired-end mode
     echo "Running Trimmomatic..."
-    java -jar $EBROOTTRIMMOMATIC/trimmomatic-*.jar PE -threads 10 \
+    java -Xmx28G -jar $EBROOTTRIMMOMATIC/trimmomatic-*.jar PE -threads 10 \
         ${R1} ${R2} \
         ${R1_PAIRED} ${R1_UNPAIRED} \
         ${R2_PAIRED} ${R2_UNPAIRED} \

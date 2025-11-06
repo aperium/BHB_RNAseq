@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=20G
+#SBATCH --mem=32G
 #SBATCH --time=5:00:00
 #SBATCH --partition=standard
 #SBATCH --array=1-42
