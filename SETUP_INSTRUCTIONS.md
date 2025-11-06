@@ -89,13 +89,17 @@ ls 01.RawData/
 This is needed for the differential expression analysis step:
 
 ```bash
+# Navigate to the script directory
+cd /scratch/$USER/BHB_complete/BHB_RNAseq/
+
 # Load miniforge module
+# module avail miniforge #check for avalible versions 
 module load miniforge/24.11.3-py3.12
 
 # Create conda environment with R and bioinformatics packages
 conda create -y -n rnaseq_r -c conda-forge -c bioconda \
     r-base=4.3 \
-    r-deseq2 \
+    bioconductor-deseq2 \
     r-ggplot2 \
     r-pheatmap \
     r-dplyr \
@@ -118,11 +122,11 @@ chmod +x *.R
 
 ```bash
 # Check how many samples you have
-ls 01.RawData/*/*.fq.gz | wc -l
+ls ../01.RawData/*/*.fq.gz | wc -l
 # Should be 84 files (42 samples × 2 read files)
 
 # Check a few file names to verify naming convention
-ls 01.RawData/*/*.fq.gz | head -10
+ls ../01.RawData/*/*.fq.gz | head -10
 ```
 
 **Important**: If your files have different naming (e.g., `_R1_001.fastq.gz` instead of `_1.fq.gz`), you'll need to adjust the file finding pattern in `04_star_align.slurm`.

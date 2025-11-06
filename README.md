@@ -56,6 +56,8 @@ For detailed transfer instructions from local machine or GitHub, see `TRANSFER_C
 │   ├── combined_genome.fa   # Yeast + ERCC combined
 │   └── combined_annotation.gtf
 ├── 01.RawData/              # Raw FASTQ files from Novogene
+├── 02.TrimmedData/          # Quality-trimmed FASTQ files (Trimmomatic)
+│   └── fastqc/              # FastQC reports on trimmed reads
 ├── 03.FastQC_raw/           # FastQC reports on raw reads
 ├── 04.Alignment/            # STAR alignment outputs (BAM files)
 ├── 05.Counts/               # Gene count matrices (yeast + ERCC)
@@ -79,7 +81,7 @@ sbatch 00_download_reference.slurm
 cd /scratch/$USER/BHB_complete/BHB_RNAseq
 bash run_full_pipeline.sh
 ```
-This submits all 8 steps with job dependencies. Jobs will run automatically as dependencies complete (~6-8 hours total).
+This submits all 11 steps with job dependencies. Jobs will run automatically as dependencies complete (~8-10 hours total).
 
 ### Option 2: Run Steps Individually
 
@@ -98,45 +100,69 @@ sbatch 01_fastqc_raw.slurm
 ```
 Runs FastQC on all raw FASTQ files to assess read quality.
 
-### Step 2: Aggregate QC Reports
+### Step 2: Aggregate QC Reports - Raw
 ```bash
 sbatch 02_multiqc_raw.slurm
 ```
-Creates a MultiQC report summarizing FastQC results across all samples.
+Creates a MultiQC report summarizing FastQC results for raw reads across all samples.
 
-**Decision Point**: Review `../03.FastQC_raw/multiqc_raw_report.html`. If quality is poor, add trimming step.
-
-### Step 3: Build STAR Index
+### Step 3: Quality Trimming with Trimmomatic
 ```bash
-sbatch 03_build_star_index.slurm
+sbatch 03_trimmomatic.slurm
 ```
-Builds STAR genome index with combined yeast + ERCC reference, optimized for yeast genome size.
+Array job (1-42) that performs quality trimming and adapter removal on all samples in parallel:
+- **Adapter removal**: NextSeq/TruSeq adapters for NovaSeq platform
+- **Quality filtering**: SLIDINGWINDOW:4:20 (average quality ≥20 in 4-base window)
+- **Length filtering**: MINLEN:36 (discard reads <36bp after trimming)
+- **Output**: Paired-end trimmed reads only (unpaired reads discarded)
 
-### Step 4: Align Reads with STAR
+Output: `../02.TrimmedData/*_R1_paired.fastq.gz` and `*_R2_paired.fastq.gz`
+
+### Step 4: Quality Control - Trimmed Reads
 ```bash
-sbatch 04_star_align.slurm
+sbatch 04_fastqc_trimmed.slurm
 ```
-Array job (1-42) that aligns all samples in parallel. Each sample gets:
+Runs FastQC on all trimmed FASTQ files to verify trimming improved quality.
+
+### Step 5: Aggregate QC Reports - Trimmed
+```bash
+sbatch 05_multiqc_trimmed.slurm
+```
+Creates MultiQC report for trimmed reads. Compare with raw reads report to confirm quality improvement.
+
+**Quality Check**: Review both `../03.FastQC_raw/multiqc_raw_report.html` and `../02.TrimmedData/fastqc/multiqc_trimmed_report.html` to verify trimming effectiveness before proceeding to alignment.
+
+### Step 6: Build STAR Index
+```bash
+sbatch 06_build_star_index.slurm
+```
+Builds STAR genome index with combined yeast + ERCC reference, optimized for yeast genome size. Can run in parallel with QC/trimming steps.
+
+### Step 7: Align Reads with STAR
+```bash
+sbatch 07_star_align.slurm
+```
+Array job (1-42) that aligns all **trimmed** samples in parallel. Each sample gets:
 - Sorted BAM file
 - BAM index
 - Gene counts (ReadsPerGene.out.tab)
 - Alignment statistics
 
-### Step 5: Aggregate Alignment QC
+### Step 8: Aggregate Alignment QC
 ```bash
-sbatch 05_multiqc_alignment.slurm
+sbatch 08_multiqc_alignment.slurm
 ```
 Creates MultiQC report for alignment statistics (alignment rate, uniqueness, etc.).
 
-### Step 6: Create Count Matrix
+### Step 9: Create Count Matrix
 ```bash
-sbatch 06_featureCounts.slurm
+sbatch 09_featureCounts.slurm
 ```
 Extracts gene counts from STAR output and creates a combined count matrix.
 
 Output: `../05.Counts/counts_matrix_unstranded.txt` (genes × samples)
 
-### Step 7: Differential Expression Analysis
+### Step 10: Differential Expression Analysis
 ```bash
 # First, set up conda environment (one-time setup, from any directory)
 module load miniforge/24.11.3-py3.12
@@ -146,7 +172,7 @@ conda create -y -n rnaseq_r -c conda-forge -c bioconda \
 
 # Then run DESeq2 (from BHB_RNAseq directory)
 cd /scratch/$USER/BHB_complete/BHB_RNAseq
-sbatch 07_run_deseq2.slurm
+sbatch 10_run_deseq2.slurm
 ```
 
 Performs differential expression analysis using DESeq2 with ERCC normalization:
@@ -229,15 +255,18 @@ scancel JOBID
 ## Expected Runtime
 
 - Step 0 (Download): ~30 min
-- Step 1 (FastQC): ~2-3 hours
-- Step 2 (MultiQC): ~5 min
-- Step 3 (STAR index): ~15 min
-- Step 4 (Alignment): ~2-3 hours (parallelized)
-- Step 5 (MultiQC): ~5 min
-- Step 6 (Counts): ~10 min
-- Step 7 (DESeq2): ~1 hour
+- Step 1 (FastQC raw): ~2-3 hours
+- Step 2 (MultiQC raw): ~5 min
+- Step 3 (Trimmomatic): ~1-2 hours (parallelized)
+- Step 4 (FastQC trimmed): ~2-3 hours
+- Step 5 (MultiQC trimmed): ~5 min
+- Step 6 (STAR index): ~15 min (runs parallel with QC steps)
+- Step 7 (Alignment): ~2-3 hours (parallelized)
+- Step 8 (MultiQC alignment): ~5 min
+- Step 9 (Counts): ~10 min
+- Step 10 (DESeq2): ~1 hour
 
-**Total**: ~6-8 hours (mostly parallelized)
+**Total**: ~8-10 hours (mostly parallelized)
 
 ## Updating the Pipeline
 
@@ -262,15 +291,21 @@ git stash pop    # Reapply your changes
 
 ## Troubleshooting
 
-### If FASTQ files aren't found in Step 4:
-The script searches for files matching `${SAMPLE}*_[12].fq.gz`. If Novogene uses different naming:
+### If FASTQ files aren't found in Step 3 (Trimmomatic):
+The script searches for raw files matching `${SAMPLE}*_[12].fq.gz`. If Novogene uses different naming:
 1. Check actual file names: `ls /scratch/$USER/BHB_complete/01.RawData/`
-2. Adjust the `find` command in `04_star_align.slurm`
+2. Adjust the `find` command in `03_trimmomatic.slurm`
+
+### If trimmed files aren't found in Step 7 (Alignment):
+The script searches for trimmed files `${SAMPLE}*_R[12]_paired.fastq.gz`:
+1. Check trimmomatic output: `ls /scratch/$USER/BHB_complete/02.TrimmedData/`
+2. Verify trimmomatic completed successfully: check logs for errors
 
 ### If alignment rates are low (<70%):
-- Check FastQC reports for adapter contamination
-- May need to add trimming step with Trimmomatic
+- Check FastQC reports for remaining adapter contamination
+- Review trimmomatic logs to ensure trimming completed successfully
 - Verify correct reference genome
+- Check MultiQC reports comparing raw vs trimmed data quality
 
 ### If R packages are missing:
 ```bash

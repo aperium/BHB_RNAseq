@@ -53,11 +53,14 @@ bash run_full_pipeline.sh
 sbatch 00_download_reference.slurm  # ~30 min
 sbatch 01_fastqc_raw.slurm          # ~2-3 hours
 sbatch 02_multiqc_raw.slurm         # ~5 min
-sbatch 03_build_star_index.slurm   # ~15 min
-sbatch 04_star_align.slurm          # ~2-3 hours (42 parallel jobs)
-sbatch 05_multiqc_alignment.slurm  # ~5 min
-sbatch 06_featureCounts.slurm      # ~10 min
-sbatch 07_run_deseq2.slurm         # ~1 hour
+sbatch 03_trimmomatic.slurm         # ~1-2 hours (42 parallel jobs)
+sbatch 04_fastqc_trimmed.slurm      # ~2-3 hours
+sbatch 05_multiqc_trimmed.slurm     # ~5 min
+sbatch 06_build_star_index.slurm   # ~15 min (parallel with QC)
+sbatch 07_star_align.slurm          # ~2-3 hours (42 parallel jobs)
+sbatch 08_multiqc_alignment.slurm  # ~5 min
+sbatch 09_featureCounts.slurm      # ~10 min
+sbatch 10_run_deseq2.slurm         # ~1 hour
 ```
 
 ## Monitoring Jobs
@@ -89,8 +92,9 @@ scancel -u $USER
 ├── BHB_RNAseq/          ← Work from here (scripts)
 ├── logs/                ← SLURM job logs
 ├── 01.RawData/          ← Raw FASTQ files
+├── 02.TrimmedData/      ← Trimmed FASTQ files
 ├── 00.Reference/        ← Genome + ERCC references
-├── 03.FastQC_raw/       ← QC reports
+├── 03.FastQC_raw/       ← QC reports (raw reads)
 ├── 04.Alignment/        ← BAM files
 ├── 05.Counts/           ← Count matrix
 └── 06.DESeq2_results/   ← Final results + ERCC QC
@@ -99,7 +103,8 @@ scancel -u $USER
 ## Key Output Files
 
 ### Quality Control
-- `../03.FastQC_raw/multiqc_raw_report.html` - Read quality
+- `../03.FastQC_raw/multiqc_raw_report.html` - Raw read quality
+- `../02.TrimmedData/fastqc/multiqc_trimmed_report.html` - Trimmed read quality
 - `../04.Alignment/multiqc_alignment_report.html` - Alignment stats
 
 ### ERCC Spike-in QC
@@ -228,9 +233,10 @@ conda env remove -n rnaseq_r
 ```
 
 ### Low alignment rates
-- Check FastQC for adapter contamination
+- Check FastQC reports for remaining adapter contamination
+- Review Trimmomatic logs for errors
 - Verify correct reference genome
-- May need trimming step (see `SETUP_INSTRUCTIONS.md`)
+- Compare raw vs trimmed read quality in MultiQC reports
 
 ## Getting Help
 

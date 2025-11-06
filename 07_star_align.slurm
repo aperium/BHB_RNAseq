@@ -19,9 +19,9 @@ module load samtools/1.21
 
 # Set up directories
 BASE_DIR=/scratch/${USER}/BHB_complete
-RAW_DIR=${BASE_DIR}/01.RawData
+TRIMMED_DIR=${BASE_DIR}/02.Trimmed
 INDEX_DIR=${BASE_DIR}/00.Reference/STAR_index
-ALIGN_DIR=${BASE_DIR}/04.Alignment
+ALIGN_DIR=${BASE_DIR}/05.Alignment
 mkdir -p ${ALIGN_DIR}
 
 # Sample names array
@@ -41,13 +41,14 @@ SAMPLE=${SAMPLES[$SLURM_ARRAY_TASK_ID-1]}
 echo "Processing sample: ${SAMPLE}"
 echo "Array task ID: ${SLURM_ARRAY_TASK_ID}"
 
-# Find the read files (adjust path pattern based on Novogene structure)
-R1=$(find ${RAW_DIR} -name "${SAMPLE}*_1.fq.gz" | head -1)
-R2=$(find ${RAW_DIR} -name "${SAMPLE}*_2.fq.gz" | head -1)
+# Find the trimmed read files (paired outputs from Trimmomatic)
+R1=${TRIMMED_DIR}/${SAMPLE}_1_paired.fq.gz
+R2=${TRIMMED_DIR}/${SAMPLE}_2_paired.fq.gz
 
-if [ -z "$R1" ] || [ -z "$R2" ]; then
-    echo "ERROR: Could not find read files for ${SAMPLE}"
-    echo "Searched for: ${RAW_DIR}/*/${SAMPLE}*_[12].fq.gz"
+if [ ! -f "$R1" ] || [ ! -f "$R2" ]; then
+    echo "ERROR: Could not find trimmed read files for ${SAMPLE}"
+    echo "Expected: ${R1}"
+    echo "Expected: ${R2}"
     exit 1
 fi
 
