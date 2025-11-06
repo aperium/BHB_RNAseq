@@ -1,5 +1,68 @@
 # Pipeline Update Summary
 
+## CRITICAL FIX: Error Handling in SLURM Scripts (Nov 6, 2024)
+
+### Problem Identified
+Several SLURM scripts were reporting "success" (exit code 0) even when critical operations failed:
+- **09_featureCounts.slurm**: Would complete successfully even if no count files existed
+- **07_star_align.slurm**: Could report success even if STAR or samtools failed
+- Empty log files indicated scripts ran but produced no output
+- Pipeline checkpoint system would mark steps as "complete" based on SLURM exit codes alone
+
+### Root Cause
+1. Scripts lacked bash error handling flags (`set -e`, `set -u`, `set -o pipefail`)
+2. No validation of output files after operations
+3. Missing files logged as "WARNING" but didn't cause script failure
+4. Commands could fail silently while script continued
+
+### Solutions Implemented
+
+#### 09_featureCounts.slurm
+Added comprehensive error handling:
+- **Error flags**: `set -e`, `set -u`, `set -o pipefail` at script start
+- **Input validation**: Check alignment directory exists, track missing count files, exit if ANY samples missing
+- **Processing validation**: Verify count files have data (>4 lines), confirm gene IDs extracted
+- **Output validation**: Verify count matrix created, check dimensions, confirm has gene data
+
+#### 07_star_align.slurm
+Added error handling and validation:
+- **Error flags**: `set -e`, `set -u`, `set -o pipefail` at script start
+- **Output validation**: Verify BAM file, gene counts file, and BAM index all created successfully
+- **Clear reporting**: Detailed success messages with file paths
+
+### Impact
+- Scripts now **fail loudly** when operations don't complete
+- Empty/missing output files cause immediate failure
+- Pipeline checkpoint system works correctly (won't mark failed steps as complete)
+- Easier debugging with clear error messages
+- Prevents downstream steps from running on bad data
+
+### What to Do Next
+1. Review why featureCounts found no input files - likely STAR alignment failed
+2. Check STAR alignment logs for actual errors
+3. Fix root cause (probably missing reference files or trimmed data)
+4. Re-run from the failing step
+
+### Diagnostic Commands (run on server)
+```bash
+# Check if alignment directory exists and has data
+ls -lh /scratch/${USER}/BHB_complete/04.Alignment/ 2>/dev/null | head -20
+
+# Check if any alignment completed
+find /scratch/${USER}/BHB_complete/04.Alignment -name "*ReadsPerGene.out.tab" | wc -l
+
+# Check STAR alignment logs for errors
+grep -i "error\|fail\|fatal" ../logs/04_star_align_*.err | head -20
+
+# Check if STAR index exists
+ls -lh /scratch/${USER}/BHB_complete/00.Reference/STAR_index/
+
+# Check if trimmed files exist
+ls -lh /scratch/${USER}/BHB_complete/02.Trimmed/*.fq.gz | head -10
+```
+
+---
+
 ## Latest Update: Enforced QC Gating with Resume Support
 
 **Date**: November 6, 2025  

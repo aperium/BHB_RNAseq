@@ -10,6 +10,11 @@
 #SBATCH --output=../logs/04_star_align_%A_%a.out
 #SBATCH --error=../logs/04_star_align_%A_%a.err
 
+# Exit immediately if any command fails
+set -e
+set -u
+set -o pipefail
+
 # STAR alignment for paired-end reads
 # This is an array job - one task per sample (42 samples)
 
@@ -70,8 +75,31 @@ STAR --runThreadN 32 \
     --outSAMattributes Standard \
     --quantMode GeneCounts
 
-# Index the BAM file
-samtools index ${OUT_DIR}/${SAMPLE}_Aligned.sortedByCoord.out.bam
+# Verify STAR output exists
+BAM_FILE="${OUT_DIR}/${SAMPLE}_Aligned.sortedByCoord.out.bam"
+COUNTS_FILE="${OUT_DIR}/${SAMPLE}_ReadsPerGene.out.tab"
 
-echo "Alignment complete for ${SAMPLE}!"
-echo "Output: ${OUT_DIR}/${SAMPLE}_Aligned.sortedByCoord.out.bam"
+if [ ! -f "${BAM_FILE}" ]; then
+    echo "ERROR: STAR alignment failed - BAM file not created: ${BAM_FILE}"
+    exit 1
+fi
+
+if [ ! -f "${COUNTS_FILE}" ]; then
+    echo "ERROR: STAR alignment failed - gene counts file not created: ${COUNTS_FILE}"
+    exit 1
+fi
+
+# Index the BAM file
+samtools index ${BAM_FILE}
+
+# Verify index was created
+if [ ! -f "${BAM_FILE}.bai" ]; then
+    echo "ERROR: Failed to create BAM index: ${BAM_FILE}.bai"
+    exit 1
+fi
+
+echo "===== ALIGNMENT COMPLETE FOR ${SAMPLE} ====="
+echo "BAM file: ${BAM_FILE}"
+echo "Gene counts: ${COUNTS_FILE}"
+echo "BAM index: ${BAM_FILE}.bai"
+echo "============================================="

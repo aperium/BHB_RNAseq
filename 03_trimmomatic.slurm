@@ -9,6 +9,11 @@
 #SBATCH --output=../logs/03_trimmomatic_%j.out
 #SBATCH --error=../logs/03_trimmomatic_%j.err
 
+# Exit immediately if any command fails
+set -e
+set -u
+set -o pipefail
+
 # Adapter trimming and quality filtering with Trimmomatic
 # Processes all 42 paired-end samples sequentially
 
@@ -53,6 +58,8 @@ echo ""
 
 # Process each sample
 COUNT=0
+FAILED_SAMPLES=()
+
 for SAMPLE in "${SAMPLES[@]}"; do
     COUNT=$((COUNT + 1))
     echo "----------------------------------------"
@@ -74,18 +81,32 @@ for SAMPLE in "${SAMPLES[@]}"; do
         echo "ERROR: Input files not found for ${SAMPLE}"
         echo "  Expected: ${R1}"
         echo "  Expected: ${R2}"
+        FAILED_SAMPLES+=("${SAMPLE}")
         continue
     fi
     
     # Run Trimmomatic in paired-end mode
     echo "Running Trimmomatic..."
-    java -Xmx28G -jar $EBROOTTRIMMOMATIC/trimmomatic-*.jar PE -threads 20 \
+    if ! java -Xmx28G -jar $EBROOTTRIMMOMATIC/trimmomatic-*.jar PE -threads 20 \
         ${R1} ${R2} \
         ${R1_PAIRED} ${R1_UNPAIRED} \
         ${R2_PAIRED} ${R2_UNPAIRED} \
         ILLUMINACLIP:${ADAPTERS}:2:30:10 \
         SLIDINGWINDOW:4:20 \
-        MINLEN:36
+        MINLEN:36; then
+        echo "ERROR: Trimmomatic failed for ${SAMPLE}"
+        FAILED_SAMPLES+=("${SAMPLE}")
+        continue
+    fi
+    
+    # Verify output files were created and are not empty
+    if [[ ! -s ${R1_PAIRED} ]] || [[ ! -s ${R2_PAIRED} ]]; then
+        echo "ERROR: Output files missing or empty for ${SAMPLE}"
+        echo "  Expected: ${R1_PAIRED}"
+        echo "  Expected: ${R2_PAIRED}"
+        FAILED_SAMPLES+=("${SAMPLE}")
+        continue
+    fi
     
     # Remove unpaired reads (as specified - discard unpaired)
     rm -f ${R1_UNPAIRED} ${R2_UNPAIRED}
@@ -93,6 +114,18 @@ for SAMPLE in "${SAMPLES[@]}"; do
     echo "✓ Completed ${SAMPLE}"
     echo ""
 done
+
+# Check if any samples failed
+if [ ${#FAILED_SAMPLES[@]} -gt 0 ]; then
+    echo ""
+    echo "=========================================="
+    echo "ERROR: Trimming failed for ${#FAILED_SAMPLES[@]} sample(s):"
+    for FAILED in "${FAILED_SAMPLES[@]}"; do
+        echo "  - ${FAILED}"
+    done
+    echo "=========================================="
+    exit 1
+fi
 
 echo "=========================================="
 echo "Trimmomatic complete!"
