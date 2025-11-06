@@ -22,8 +22,8 @@ mkdir -p ${TRIMMED_DIR}
 
 # Trimmomatic adapter file for NovaSeq (uses NextSeq/NovaSeq adapters)
 # NovaSeq uses same adapters as NextSeq - check both possibilities
-# Use TRIMMOMATIC_HOME environment variable set by module, or fallback to generic path
-ADAPTER_DIR=${TRIMMOMATIC_HOME:-/opt/apps/trimmomatic}/adapters
+# Use EBROOTTRIMMOMATIC environment variable set by module
+ADAPTER_DIR=${EBROOTTRIMMOMATIC}/adapters
 if [[ -f ${ADAPTER_DIR}/NextSeq-PE.fa ]]; then
     ADAPTERS=${ADAPTER_DIR}/NextSeq-PE.fa
 elif [[ -f ${ADAPTER_DIR}/TruSeq3-PE.fa ]]; then
@@ -79,7 +79,7 @@ for SAMPLE in "${SAMPLES[@]}"; do
     
     # Run Trimmomatic in paired-end mode
     echo "Running Trimmomatic..."
-    trimmomatic PE -threads 10 \
+    java -jar $EBROOTTRIMMOMATIC/trimmomatic-*.jar PE -threads 10 \
         ${R1} ${R2} \
         ${R1_PAIRED} ${R1_UNPAIRED} \
         ${R2_PAIRED} ${R2_UNPAIRED} \
