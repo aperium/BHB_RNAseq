@@ -12,7 +12,7 @@
 # Adapter trimming and quality filtering with Trimmomatic
 # Processes all 42 paired-end samples sequentially
 
-module load trimmomatic/0.39
+module load trimmomatic/0.40
 
 # Set up directories
 BASE_DIR=/scratch/${USER}/BHB_complete
@@ -22,7 +22,7 @@ mkdir -p ${TRIMMED_DIR}
 
 # Trimmomatic adapter file for NovaSeq (uses NextSeq/NovaSeq adapters)
 # NovaSeq uses same adapters as NextSeq - check both possibilities
-ADAPTER_DIR=/opt/apps/trimmomatic/0.39/adapters
+ADAPTER_DIR=/opt/apps/trimmomatic/0.40/adapters
 if [[ -f ${ADAPTER_DIR}/NextSeq-PE.fa ]]; then
     ADAPTERS=${ADAPTER_DIR}/NextSeq-PE.fa
 elif [[ -f ${ADAPTER_DIR}/TruSeq3-PE.fa ]]; then
