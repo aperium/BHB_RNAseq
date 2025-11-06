@@ -136,11 +136,11 @@ ls ../01.RawData/*/*.fq.gz | head -10
 ### Verify Module Availability
 
 ```bash
-module load star/2.7.11b
-module load samtools/1.21
-module load fastqc/0.12.1
-module load multiqc/1.27.1
-module load trimmomatic/0.39
+module load star
+module load samtools
+module load fastqc
+module load multiqc
+module load trimmomatic
 
 # If all load without error, you're good!
 module purge
