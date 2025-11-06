@@ -2,8 +2,8 @@
 #SBATCH --job-name=star_align
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=32G
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=48G
 #SBATCH --time=5:00:00
 #SBATCH --partition=standard
 #SBATCH --array=1-42
@@ -59,7 +59,8 @@ OUT_DIR=${ALIGN_DIR}/${SAMPLE}
 mkdir -p ${OUT_DIR}
 
 # Run STAR alignment
-STAR --runThreadN 16 \
+STAR --runThreadN 32 \
+    --limitBAMsortRAM 40000000000 \
     --genomeDir ${INDEX_DIR} \
     --readFilesIn ${R1} ${R2} \
     --readFilesCommand zcat \
