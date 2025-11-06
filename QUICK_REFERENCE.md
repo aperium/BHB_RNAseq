@@ -39,6 +39,34 @@ conda create -y -n rnaseq_r -c conda-forge -c bioconda \
     r-rcolorbrewer bioconductor-enhancedvolcano
 ```
 
+## Julia QC Validation (NEW - Phase 1!)
+
+**Setup (one-time on login node):**
+```bash
+bash scripts/setup_julia_env.sh
+```
+
+**Run QC after featureCounts:**
+```bash
+sbatch 09.5_validate_counts_qc.slurm  # ~1-2 min
+```
+
+**View results:**
+```bash
+cat /scratch/$USER/BHB_complete/05.Counts/julia_qc_report.txt
+```
+
+**What it does:**
+- ✓ Validates all 42 STAR count files
+- ✓ Checks combined count matrix
+- ✓ Cross-validates individual files vs matrix
+- ✓ Calculates ERCC statistics
+- ✓ Identifies outliers and issues
+
+See `JULIA_PHASE1_README.md` for full documentation.
+
+---
+
 ## Running the Pipeline
 
 ```bash
@@ -50,17 +78,18 @@ cd /scratch/$USER/BHB_complete/BHB_RNAseq
 bash run_full_pipeline.sh
 
 # OR run steps individually:
-sbatch 00_download_reference.slurm  # ~30 min
-sbatch 01_fastqc_raw.slurm          # ~2-3 hours
-sbatch 02_multiqc_raw.slurm         # ~5 min
-sbatch 03_trimmomatic.slurm         # ~1-2 hours (42 parallel jobs)
-sbatch 04_fastqc_trimmed.slurm      # ~2-3 hours
-sbatch 05_multiqc_trimmed.slurm     # ~5 min
-sbatch 06_build_star_index.slurm   # ~15 min (parallel with QC)
-sbatch 07_star_align.slurm          # ~2-3 hours (42 parallel jobs)
-sbatch 08_multiqc_alignment.slurm  # ~5 min
-sbatch 09_featureCounts.slurm      # ~10 min
-sbatch 10_run_deseq2.slurm         # ~1 hour
+sbatch 00_download_reference.slurm     # ~30 min
+sbatch 01_fastqc_raw.slurm             # ~2-3 hours
+sbatch 02_multiqc_raw.slurm            # ~5 min
+sbatch 03_trimmomatic.slurm            # ~1-2 hours (42 parallel jobs)
+sbatch 04_fastqc_trimmed.slurm         # ~2-3 hours
+sbatch 05_multiqc_trimmed.slurm        # ~5 min
+sbatch 06_build_star_index.slurm      # ~15 min (parallel with QC)
+sbatch 07_star_align.slurm             # ~2-3 hours (42 parallel jobs)
+sbatch 08_multiqc_alignment.slurm     # ~5 min
+sbatch 09_featureCounts.slurm         # ~10 min
+sbatch 09.5_validate_counts_qc.slurm  # ~1-2 min (Julia QC - optional)
+sbatch 10_run_deseq2.slurm            # ~1 hour
 ```
 
 ## Monitoring Jobs
