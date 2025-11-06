@@ -211,6 +211,44 @@ Use `--account=${SLURM_ACCOUNT}` in all `sbatch` commands:
 sbatch --account=${SLURM_ACCOUNT} script.slurm
 ```
 
+### Other Pipeline Environment Variables
+
+**`SKIP_QC_CHECK`** - Skip the legacy trimming quality validation gate (step 5.5)
+
+By default, the pipeline includes an automated quality check after trimming (step 5.5) that validates:
+- Read retention rate ≥80%
+- Average read length doesn't drop >20%
+- Quality failure rate doesn't increase >5%
+
+If this check fails, the pipeline stops. To bypass this check (after manually verifying quality):
+
+```bash
+# Set the variable BEFORE running the pipeline script
+export SKIP_QC_CHECK=1
+bash run_full_pipeline.sh ${SLURM_ACCOUNT}
+
+# OR set it inline (preferred for one-time use)
+SKIP_QC_CHECK=1 bash run_full_pipeline.sh ${SLURM_ACCOUNT}
+
+# For resume mode:
+SKIP_QC_CHECK=1 bash run_full_pipeline.sh --resume ${SLURM_ACCOUNT}
+```
+
+**⚠️ Important**: Environment variables must be set on the **same line** as the command (inline) or **exported** first. Setting them on a separate line won't work:
+
+```bash
+# ❌ WRONG - This does NOT work:
+SKIP_QC_CHECK=1
+bash run_full_pipeline.sh ${SLURM_ACCOUNT}
+
+# ✓ CORRECT - Inline (one line):
+SKIP_QC_CHECK=1 bash run_full_pipeline.sh ${SLURM_ACCOUNT}
+
+# ✓ CORRECT - Export first:
+export SKIP_QC_CHECK=1
+bash run_full_pipeline.sh ${SLURM_ACCOUNT}
+```
+
 ### Option 1: Automated Full Pipeline (Recommended)
 
 Submit all jobs at once with automatic dependencies:
@@ -296,6 +334,13 @@ sbatch --account=${SLURM_ACCOUNT} 04_fastqc_trimmed.slurm
 # Step 5: Aggregate QC for trimmed reads
 sbatch --account=${SLURM_ACCOUNT} 05_multiqc_trimmed.slurm
 # Review: ../02.TrimmedData/multiqc_trimmed_report.html
+
+# Step 5.5: Quality validation gate (automated check)
+# This runs automatically in the full pipeline
+# For manual execution after steps 2 and 5 complete:
+bash 05.5_check_trimming_quality.sh
+# If quality check fails but you want to proceed anyway:
+# SKIP_QC_CHECK=1 (set this before running subsequent steps)
 
 # Step 6: Build STAR index
 sbatch --account=${SLURM_ACCOUNT} 06_build_star_index.slurm

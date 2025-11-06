@@ -2,6 +2,15 @@
 
 This pipeline analyzes paired-end RNA-seq data from *Saccharomyces cerevisiae* with multiple treatment conditions across log and stationary growth phases.
 
+## 🆕 Julia QC Validation (Phase 1 - Optional)
+
+A **low-risk enhancement** providing additional quality control using Julia. Completely optional - your pipeline works fine without it!
+
+**Quick start:** `bash scripts/setup_julia_env.sh` (one-time), then `sbatch 09.5_validate_counts_qc.slurm`  
+**Full documentation:** See [`JULIA_PHASE1_README.md`](JULIA_PHASE1_README.md)
+
+---
+
 ## GitHub Repository
 
 **Repository**: https://github.com/aperium/BHB_RNAseq
@@ -187,6 +196,29 @@ Runs FastQC on all trimmed FASTQ files to verify trimming improved quality.
 sbatch --account=${SLURM_ACCOUNT} 05_multiqc_trimmed.slurm
 ```
 Creates MultiQC report for trimmed reads. Compare with raw reads report to confirm quality improvement.
+
+### Step 5.5: Quality Validation Gate (Automated Check)
+```bash
+# Normally runs automatically in full pipeline
+# For manual execution:
+bash 05.5_check_trimming_quality.sh
+```
+
+This automated quality check validates that trimming was successful before proceeding to alignment. It checks:
+- **Read retention rate** ≥80%
+- **Average read length** doesn't drop >20%
+- **Quality failure rate** doesn't increase >5%
+
+The full pipeline runs this automatically. If quality thresholds aren't met, the pipeline stops here.
+
+**To bypass this check** (not recommended unless you've manually verified quality):
+```bash
+# When running full pipeline:
+SKIP_QC_CHECK=1 bash run_full_pipeline.sh ${SLURM_ACCOUNT}
+
+# When resuming:
+SKIP_QC_CHECK=1 bash run_full_pipeline.sh --resume ${SLURM_ACCOUNT}
+```
 
 **Quality Check**: Review both `../03.FastQC_raw/multiqc_raw_report.html` and `../02.TrimmedData/fastqc/multiqc_trimmed_report.html` to verify trimming effectiveness before proceeding to alignment.
 
