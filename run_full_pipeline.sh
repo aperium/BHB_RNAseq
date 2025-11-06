@@ -26,6 +26,13 @@ check_step_complete() {
             [[ $(find ../02.TrimmedData/fastqc -name "*_fastqc.zip" 2>/dev/null | wc -l) -ge 84 ]] ;;
         5)  # MultiQC trimmed - check for report
             [[ -f "../02.TrimmedData/fastqc/multiqc_trimmed_report.html" ]] ;;
+        5.5) # QC validation - check that validation was performed and passed
+            # Check for QC validation marker file, or that both MultiQC reports exist
+            # (if reports exist and no failure marker, we can consider QC passed)
+            [[ -f "../logs/qc_validation_passed.marker" ]] || \
+            ( [[ -f "../02.TrimmedData/fastqc/multiqc_trimmed_report.html" ]] && \
+              [[ -f "../03.FastQC_raw/multiqc_raw_report.html" ]] && \
+              [[ ! -f "../logs/qc_validation_failed.marker" ]] ) ;;
         6)  # STAR index - check for SAindex file
             [[ -f "../00.Reference/yeast_ercc_combined/SAindex" ]] ;;
         7)  # STAR alignment - check for all 42 BAM files
@@ -76,6 +83,7 @@ echo "  2. MultiQC raw reads"
 echo "  3. Trimmomatic quality trimming"
 echo "  4. FastQC on trimmed reads"
 echo "  5. MultiQC trimmed reads"
+echo "  5.5. Quality validation gate (checks trimming success)"
 echo "  6. Build STAR index"
 echo "  7. STAR alignment (42 samples in parallel)"
 echo "  8. MultiQC alignment stats"
@@ -195,8 +203,8 @@ fi
 if [[ "${SKIP_QC_CHECK}" == "1" ]]; then
     echo "Step 5.5 (Quality check): ⚠ SKIPPED (SKIP_QC_CHECK=1 is set)"
     JOB5_5="completed"
-elif [[ "$RESUME" == true ]] && check_step_complete 5 && check_step_complete 2; then
-    echo "Step 5.5 (Quality check): ✓ ALREADY VALIDATED (MultiQC reports exist)"
+elif [[ "$RESUME" == true ]] && check_step_complete 5.5; then
+    echo "Step 5.5 (Quality check): ✓ ALREADY VALIDATED (QC passed previously)"
     JOB5_5="completed"
 else
     # Check if both MultiQC reports are ready NOW (before we submit more jobs)

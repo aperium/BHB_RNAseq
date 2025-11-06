@@ -7,6 +7,13 @@ set -euo pipefail
 
 RAW_JSON="../03.FastQC_raw/multiqc_data/multiqc_data.json"
 TRIMMED_JSON="../02.TrimmedData/fastqc/multiqc_data/multiqc_data.json"
+LOG_DIR="../logs"
+
+# Create logs directory if it doesn't exist
+mkdir -p "$LOG_DIR"
+
+# Remove any previous QC markers
+rm -f "$LOG_DIR/qc_validation_passed.marker" "$LOG_DIR/qc_validation_failed.marker"
 
 echo "=========================================="
 echo "Trimming Quality Check"
@@ -94,10 +101,14 @@ if [[ "$PASS" == true ]]; then
     echo "✓ OVERALL: QUALITY CHECK PASSED"
     echo "Pipeline can proceed to alignment"
     echo "=========================================="
+    # Create marker file for successful QC validation
+    touch "$LOG_DIR/qc_validation_passed.marker"
     exit 0
 else
     echo "❌ OVERALL: QUALITY CHECK FAILED"
     echo "Review trimming parameters before proceeding"
     echo "=========================================="
+    # Create marker file for failed QC validation
+    touch "$LOG_DIR/qc_validation_failed.marker"
     exit 1
 fi

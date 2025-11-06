@@ -1,6 +1,64 @@
 # Pipeline Update Summary
 
-## Latest Update: Checkpoint/Resume Functionality
+## Latest Update: Enforced QC Gating with Resume Support
+
+**Date**: November 6, 2025  
+**Update**: Added mandatory quality control gating step (5.5) with full resume functionality
+
+### New Feature: QC Gating Step (Step 5.5)
+
+The pipeline now includes a **mandatory quality control check** between trimming QC and alignment:
+
+**What it does:**
+- Validates trimming quality using MultiQC metrics
+- **Blocks downstream steps** (STAR alignment, featureCounts, DESeq2) if quality is insufficient
+- Creates marker files to track QC pass/fail status
+- Integrates with checkpoint/resume system
+
+**Quality Criteria:**
+- ≥95% of samples must pass all QC checks:
+  - Mean quality score ≥30
+  - ≥90% bases above Q30
+  - Adapter content <5%
+  - Duplication rate <50%
+
+**How it works:**
+```bash
+# Automatic in full pipeline
+bash run_full_pipeline.sh berglandlab
+
+# Step 5.5 runs automatically after Step 5 (MultiQC trimmed)
+# If QC PASSES: Creates qc_validation_passed.marker → downstream continues
+# If QC FAILS: Creates qc_validation_failed.marker → pipeline halts with error
+```
+
+**Resume behavior:**
+- If QC already passed: Skips step 5.5, continues to alignment
+- If QC previously failed: Reports failure, prevents downstream steps
+- Manual override: `SKIP_QC_CHECK=1 bash run_full_pipeline.sh --resume berglandlab`
+
+**Benefits:**
+- ✅ Prevents wasting compute resources on poor-quality data
+- ✅ Catches quality issues before expensive alignment steps
+- ✅ Provides clear failure messages with actionable recommendations
+- ✅ Integrated with resume system for seamless workflow
+- ✅ Optional skip for troubleshooting or reanalysis
+
+**Files created:**
+- `../02.TrimmedData/fastqc/qc_validation_passed.marker` - QC passed, allow downstream
+- `../02.TrimmedData/fastqc/qc_validation_failed.marker` - QC failed, block downstream
+
+**New Script:**
+- `05.5_check_trimming_quality.sh` - Automated QC validation script
+
+**Updated Documentation:**
+- `run_full_pipeline.sh` - Integrated QC gating into step sequence and resume logic
+- Step numbering now explicitly includes step 5.5 in pipeline output
+- `check_step_complete()` function detects QC marker files for proper resume behavior
+
+---
+
+## Previous Update: Checkpoint/Resume Functionality
 
 **Date**: November 6, 2025  
 **Update**: Added checkpoint/resume capability to `run_full_pipeline.sh`
@@ -32,6 +90,7 @@ bash run_full_pipeline.sh --resume ${SLURM_ACCOUNT}
 - Step 3: 84 paired trimmed FASTQ files in `../02.TrimmedData/`
 - Step 4: 84 FastQC files for trimmed data
 - Step 5: `../02.TrimmedData/fastqc/multiqc_trimmed_report.html`
+- **Step 5.5: QC marker files (`qc_validation_passed.marker` or `qc_validation_failed.marker`)**
 - Step 6: `../00.Reference/yeast_ercc_combined/SAindex`
 - Step 7: 42 BAM files in `../04.STAR_alignment/`
 - Step 8: `../04.STAR_alignment/multiqc_alignment_report.html`
@@ -328,6 +387,7 @@ The pipeline uses **ERCC normalization by default** but saves both methods for c
 - `ERCC_SPIKE_IN_GUIDE.md`
 - `QUICK_REFERENCE.md`
 - `run_full_pipeline.sh`
+- `05.5_check_trimming_quality.sh` - QC gating script
 - `UPDATE_SUMMARY.md` (this file)
 
 ### Modified Files (from ERCC update):
@@ -343,6 +403,10 @@ The pipeline uses **ERCC normalization by default** but saves both methods for c
 - `README.md` - ERCC info + directory structure
 - `SETUP_INSTRUCTIONS.md` - New workflow + ERCC QC
 - `experimental_design.csv` - No changes (already compatible)
+
+### Modified Files (QC gating update):
+- `run_full_pipeline.sh` - Added step 5.5 to pipeline sequence, enhanced `check_step_complete()` to detect QC marker files, integrated QC gating into resume logic
+- `05.5_check_trimming_quality.sh` - Creates QC pass/fail marker files based on MultiQC metrics validation
 
 ## Backward Compatibility
 
