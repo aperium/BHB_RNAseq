@@ -232,6 +232,29 @@ bash run_full_pipeline.sh
 
 This will submit all 11 steps with job dependencies. Each step will automatically start when its prerequisites complete. Total runtime: ~8-10 hours.
 
+**Resume from checkpoint:** If the pipeline was interrupted or failed partway through:
+
+```bash
+bash run_full_pipeline.sh --resume ${SLURM_ACCOUNT}
+```
+
+The `--resume` flag:
+- Checks for output files from each step
+- Skips steps that completed successfully
+- Only submits jobs for incomplete steps
+- Maintains proper dependencies between new and completed steps
+- Saves time and compute resources by not re-running expensive steps
+
+**What gets checked for each step:**
+- Step 0: Combined reference FASTA file
+- Step 1-2: FastQC reports and MultiQC HTML
+- Step 3: All 84 trimmed paired FASTQ files
+- Step 4-5: FastQC on trimmed data and MultiQC report
+- Step 6: STAR genome index
+- Step 7: All 42 sorted BAM files
+- Step 8-9: Alignment MultiQC report and count matrix
+- Step 10: DESeq2 results file
+
 Monitor progress:
 ```bash
 watch -n 60 'squeue -u $USER'

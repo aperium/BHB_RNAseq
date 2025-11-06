@@ -127,6 +127,20 @@ bash run_full_pipeline.sh
 ```
 This submits all 11 steps with job dependencies. Jobs will run automatically as dependencies complete (~8-10 hours total).
 
+**Resume from checkpoint:** If the pipeline was interrupted or failed partway through, resume from the last successfully completed step:
+
+```bash
+bash run_full_pipeline.sh --resume ${SLURM_ACCOUNT}
+```
+
+The `--resume` flag:
+- Checks for output files from each step
+- Skips steps that completed successfully
+- Only submits jobs for incomplete steps
+- Maintains proper dependencies between new and completed steps
+
+This saves time and compute resources by not re-running expensive steps (e.g., Trimmomatic, STAR alignment).
+
 ### Option 2: Run Steps Individually
 
 ## Pipeline Steps

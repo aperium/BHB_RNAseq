@@ -1,6 +1,61 @@
 # Pipeline Update Summary
 
-## Latest Update: Trimmomatic Quality Trimming Integration
+## Latest Update: Checkpoint/Resume Functionality
+
+**Date**: November 6, 2025  
+**Update**: Added checkpoint/resume capability to `run_full_pipeline.sh`
+
+### New Feature: Resume from Checkpoint
+
+The master submission script now supports resuming from partial pipeline runs:
+
+```bash
+bash run_full_pipeline.sh --resume ${SLURM_ACCOUNT}
+```
+
+**How it works:**
+- Checks for expected output files from each step
+- Skips steps that have already completed successfully
+- Only submits jobs for incomplete steps
+- Maintains proper job dependencies between new and completed steps
+
+**Benefits:**
+- ✅ Saves compute time and SUs by not re-running expensive steps
+- ✅ Easy recovery from pipeline interruptions or failures
+- ✅ Test individual step changes without rerunning entire pipeline
+- ✅ Flexible resumption - picks up exactly where you left off
+
+**Checkpoint detection for each step:**
+- Step 0: `../00.Reference/yeast_ercc_combined.fasta`
+- Step 1: 84 FastQC zip files in `../03.FastQC_raw/`
+- Step 2: `../03.FastQC_raw/multiqc_raw_report.html`
+- Step 3: 84 paired trimmed FASTQ files in `../02.TrimmedData/`
+- Step 4: 84 FastQC files for trimmed data
+- Step 5: `../02.TrimmedData/fastqc/multiqc_trimmed_report.html`
+- Step 6: `../00.Reference/yeast_ercc_combined/SAindex`
+- Step 7: 42 BAM files in `../04.STAR_alignment/`
+- Step 8: `../04.STAR_alignment/multiqc_alignment_report.html`
+- Step 9: `../05.Counts/counts_matrix_unstranded.txt`
+- Step 10: `../06.DESeq2_results/dds.rds`
+
+**Example usage:**
+```bash
+# First run gets interrupted after trimming completes
+bash run_full_pipeline.sh berglandlab
+
+# Later, resume from where it left off
+bash run_full_pipeline.sh --resume berglandlab
+# Output: "3 steps skipped (already complete), 8 new jobs submitted"
+```
+
+**Updated Documentation:**
+- `README.md` - Added resume flag documentation
+- `SETUP_INSTRUCTIONS.md` - Added detailed checkpoint information
+- `run_full_pipeline.sh` - Enhanced with checkpoint detection logic
+
+---
+
+## Previous Update: Trimmomatic Quality Trimming Integration
 
 **Date**: November 6, 2025  
 **Update**: Added mandatory quality trimming step with Trimmomatic
