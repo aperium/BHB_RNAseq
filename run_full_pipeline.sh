@@ -21,7 +21,7 @@ check_step_complete() {
         2)  # MultiQC raw - check for report
             [[ -f "../03.FastQC_raw/multiqc_raw_report.html" ]] ;;
         3)  # Trimmomatic - check for all 84 paired output files (42 samples × 2 files)
-            [[ $(find ../02.TrimmedData -name "*_paired.fastq.gz" 2>/dev/null | wc -l) -ge 84 ]] ;;
+            [[ $(find ../02.Trimmed -name "*_paired.fq.gz" 2>/dev/null | wc -l) -ge 84 ]] ;;
         4)  # FastQC trimmed - check for all 84 fastqc files on trimmed data
             [[ $(find ../02.TrimmedData/fastqc -name "*_fastqc.zip" 2>/dev/null | wc -l) -ge 84 ]] ;;
         5)  # MultiQC trimmed - check for report
