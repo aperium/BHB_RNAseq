@@ -59,6 +59,7 @@ This creates a clean directory structure:
 ├── 01.RawData/          # Raw FASTQ files (already on HPC)
 ├── logs/                # SLURM job logs (will be created)
 ├── 00.Reference/        # Reference files (will be created)
+├── 02.TrimmedData/      # Trimmed FASTQ files (will be created)
 ├── 03.FastQC_raw/       # QC outputs (will be created)
 ├── 04.Alignment/        # Alignment outputs (will be created)
 ├── 05.Counts/           # Count matrices (will be created)
@@ -138,6 +139,7 @@ module load star/2.7.11b
 module load samtools/1.21
 module load fastqc/0.12.1
 module load multiqc/1.27.1
+module load trimmomatic/0.39
 
 # If all load without error, you're good!
 module purge
@@ -158,7 +160,7 @@ cd /scratch/$USER/BHB_complete/BHB_RNAseq
 bash run_full_pipeline.sh
 ```
 
-This will submit all 8 steps with job dependencies. Each step will automatically start when its prerequisites complete. Total runtime: ~6-8 hours.
+This will submit all 11 steps with job dependencies. Each step will automatically start when its prerequisites complete. Total runtime: ~8-10 hours.
 
 Monitor progress:
 ```bash
@@ -186,24 +188,35 @@ sbatch 01_fastqc_raw.slurm
 sbatch 02_multiqc_raw.slurm
 # Review: ../03.FastQC_raw/multiqc_raw_report.html
 
-# Step 3: Build STAR index
-sbatch 03_build_star_index.slurm
+# Step 3: Quality trimming
+sbatch 03_trimmomatic.slurm
+# This launches 42 parallel trimming jobs (one per sample)
 
-# Step 4: Align reads (this will launch 42 parallel jobs)
-sbatch 04_star_align.slurm
+# Step 4: QC trimmed reads
+sbatch 04_fastqc_trimmed.slurm
+
+# Step 5: Aggregate QC for trimmed reads
+sbatch 05_multiqc_trimmed.slurm
+# Review: ../02.TrimmedData/multiqc_trimmed_report.html
+
+# Step 6: Build STAR index
+sbatch 06_build_star_index.slurm
+
+# Step 7: Align reads (this will launch 42 parallel jobs)
+sbatch 07_star_align.slurm
 
 # Monitor array job progress:
 squeue -u $USER
 watch -n 60 'squeue -u $USER'  # Updates every 60 seconds
 
-# Step 5: Aggregate alignment QC
-sbatch 05_multiqc_alignment.slurm
+# Step 8: Aggregate alignment QC
+sbatch 08_multiqc_alignment.slurm
 
-# Step 6: Create count matrix
-sbatch 06_featureCounts.slurm
+# Step 9: Create count matrix
+sbatch 09_featureCounts.slurm
 
-# Step 7: DESeq2 analysis
-sbatch 07_run_deseq2.slurm
+# Step 10: DESeq2 analysis
+sbatch 10_run_deseq2.slurm
 ```
 
 

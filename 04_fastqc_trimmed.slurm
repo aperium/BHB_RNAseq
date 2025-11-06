@@ -6,7 +6,7 @@
 #SBATCH --mem=32G
 #SBATCH --time=4:00:00
 #SBATCH --partition=standard
-#SBATCH --account=YOUR_HPC_ACCOUNT
+#SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/04_fastqc_trimmed_%j.out
 #SBATCH --error=../logs/04_fastqc_trimmed_%j.err
 

@@ -1,5 +1,83 @@
 # Pipeline Update Summary
 
+## Latest Update: Trimmomatic Quality Trimming Integration
+
+**Date**: November 6, 2025  
+**Update**: Added mandatory quality trimming step with Trimmomatic
+
+### Changes
+
+**Pipeline expanded from 8 to 11 steps** with the addition of:
+- **Step 3**: Trimmomatic quality trimming (42 parallel jobs)
+- **Step 4**: FastQC on trimmed reads
+- **Step 5**: MultiQC on trimmed reads
+
+**Rationale**: Implements best-practice approach with **two complete QC cycles**:
+1. QC on raw reads (Steps 1-2) - identify quality issues
+2. Quality trimming (Step 3) - remove adapters and low-quality bases
+3. QC on trimmed reads (Steps 4-5) - **verify improvement before alignment**
+
+#### Modified Scripts:
+
+**07_star_align.slurm** (previously 04_star_align.slurm)
+- Now uses **trimmed reads** from `/scratch/$USER/BHB_complete/02.TrimmedData/`
+- Updated file patterns to match Trimmomatic paired output naming: `*_R1_paired.fastq.gz` / `*_R2_paired.fastq.gz`
+
+**run_full_pipeline.sh**
+- Updated to include three new Trimmomatic jobs with proper dependencies
+- Jobs 6-10 renumbered (previously 3-7)
+- Alignment now depends on both STAR index AND trimmed reads completion
+
+#### New Scripts:
+
+**03_trimmomatic.slurm**
+- Platform: NovaSeq (uses NextSeq-PE.fa adapters)
+- Quality filtering: SLIDINGWINDOW:4:20 (trim when avg quality drops below Q20 in 4bp window)
+- Minimum length: MINLEN:36
+- Discards unpaired reads (only keeps paired outputs for alignment)
+- 42 parallel array jobs (one per sample)
+
+**04_fastqc_trimmed.slurm**
+- Runs FastQC on trimmed paired-end reads
+- Outputs to `/scratch/$USER/BHB_complete/02.TrimmedData/fastqc/`
+
+**05_multiqc_trimmed.slurm**
+- Aggregates QC reports for trimmed reads
+- Generates comparison report to verify quality improvement
+
+#### New Directory:
+
+```
+02.TrimmedData/
+├── *_R1_paired.fastq.gz     # Forward reads (trimmed, paired)
+├── *_R2_paired.fastq.gz     # Reverse reads (trimmed, paired)
+├── fastqc/                   # FastQC reports on trimmed reads
+└── multiqc_trimmed_report.html
+```
+
+#### File Renumbering:
+
+Scripts renumbered to accommodate new steps 3-5:
+- `03_build_star_index.slurm` → `06_build_star_index.slurm`
+- `04_star_align.slurm` → `07_star_align.slurm` (and modified)
+- `05_multiqc_alignment.slurm` → `08_multiqc_alignment.slurm`
+- `06_featureCounts.slurm` → `09_featureCounts.slurm`
+- `07_deseq2_analysis.R` → `10_deseq2_analysis.R`
+- `07_run_deseq2.slurm` → `10_run_deseq2.slurm`
+
+#### Updated Documentation:
+
+- `README.md` - Updated with 11-step pipeline structure
+- `QUICK_REFERENCE.md` - Added Trimmomatic steps
+- `SETUP_INSTRUCTIONS.md` - Updated module requirements and step numbering
+- `run_full_pipeline.sh` - Now submits 11 steps with proper dependencies
+
+**Expected Runtime**: Increased from ~6-8 hours to ~8-10 hours (includes trimming + additional QC)
+
+---
+
+## Previous Update: ERCC92 Spike-in Integration
+
 **Date**: November 5, 2025  
 **Update**: ERCC92 spike-in integration + Directory reorganization
 
@@ -97,7 +175,7 @@ To:
 
 **run_full_pipeline.sh** (NEW)
 - Master submission script
-- Automatically submits all 8 steps with dependencies
+- Automatically submits all pipeline steps with dependencies
 - Checks for conda environment
 - Provides status updates
 
@@ -197,17 +275,17 @@ The pipeline uses **ERCC normalization by default** but saves both methods for c
 - `run_full_pipeline.sh`
 - `UPDATE_SUMMARY.md` (this file)
 
-### Modified Files:
+### Modified Files (from ERCC update):
 - `00_download_reference.slurm` - ERCC download and concatenation
 - `01_fastqc_raw.slurm` - Updated log paths
 - `02_multiqc_raw.slurm` - Updated log paths
-- `03_build_star_index.slurm` - Combined reference + updated paths
-- `04_star_align.slurm` - Updated log paths
-- `05_multiqc_alignment.slurm` - Updated log paths
-- `06_featureCounts.slurm` - Updated log paths
-- `07_run_deseq2.slurm` - Updated log paths
-- `07_deseq2_analysis.R` - ERCC normalization logic
-- `README_pipeline.md` - ERCC info + directory structure
+- `06_build_star_index.slurm` (was 03) - Combined reference + updated paths
+- `07_star_align.slurm` (was 04) - Updated log paths
+- `08_multiqc_alignment.slurm` (was 05) - Updated log paths
+- `09_featureCounts.slurm` (was 06) - Updated log paths
+- `10_run_deseq2.slurm` (was 07) - Updated log paths
+- `10_deseq2_analysis.R` (was 07) - ERCC normalization logic
+- `README.md` - ERCC info + directory structure
 - `SETUP_INSTRUCTIONS.md` - New workflow + ERCC QC
 - `experimental_design.csv` - No changes (already compatible)
 
