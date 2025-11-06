@@ -184,6 +184,95 @@ else
     fi
 fi
 
+# Step 5.5: Quality check (runs after both MultiQC reports complete)
+# This validates trimming quality using the dedicated QC script
+# Pipeline will only proceed if quality thresholds are met (or SKIP_QC_CHECK=1)
+#
+# Strategy:
+# - If QC can be skipped or already validated: skip
+# - If both MultiQC reports already exist: run QC check now
+# - Otherwise: submit QC check as a SLURM job that depends on both MultiQC jobs
+if [[ "${SKIP_QC_CHECK}" == "1" ]]; then
+    echo "Step 5.5 (Quality check): ⚠ SKIPPED (SKIP_QC_CHECK=1 is set)"
+    JOB5_5="completed"
+elif [[ "$RESUME" == true ]] && check_step_complete 5 && check_step_complete 2; then
+    echo "Step 5.5 (Quality check): ✓ ALREADY VALIDATED (MultiQC reports exist)"
+    JOB5_5="completed"
+else
+    # Check if both MultiQC reports are ready NOW (before we submit more jobs)
+    if [[ "$JOB2" == "completed" ]] && [[ "$JOB5" == "completed" ]]; then
+        # Both MultiQC jobs were already complete - run QC check immediately
+        echo "Step 5.5 (Quality check): Running validation now..."
+        if bash 05.5_check_trimming_quality.sh; then
+            echo "Step 5.5 (Quality check): ✓ PASSED"
+            JOB5_5="completed"
+        else
+            echo "Step 5.5 (Quality check): ❌ FAILED"
+            echo ""
+            echo "ERROR: Trimming quality did not meet thresholds."
+            echo "Review the MultiQC reports at:"
+            echo "  ../03.FastQC_raw/multiqc_raw_report.html"
+            echo "  ../02.TrimmedData/fastqc/multiqc_trimmed_report.html"
+            echo ""
+            echo "To bypass this check and continue anyway:"
+            echo "  SKIP_QC_CHECK=1 bash run_full_pipeline.sh --resume ${SLURM_ACCOUNT}"
+            exit 1
+        fi
+    else
+        # MultiQC jobs are still pending - submit QC check as a SLURM job
+        # Create a wrapper script that will run the QC check
+        cat > 05.5_qc_check_wrapper.slurm << 'EOF'
+#!/bin/bash
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=1G
+#SBATCH --time=00:05:00
+#SBATCH --partition=standard
+#SBATCH --account=ACCOUNT_PLACEHOLDER
+#SBATCH -o /scratch/%u/BHB_complete/logs/05.5_qc_check_%j.out
+#SBATCH -e /scratch/%u/BHB_complete/logs/05.5_qc_check_%j.err
+
+# This wrapper runs the quality check script and exits with its exit code
+# If QC fails, this job fails, blocking downstream jobs
+
+cd /scratch/$USER/BHB_complete/BHB_RNAseq
+
+echo "========================================"
+echo "Running Trimming Quality Check"
+echo "========================================"
+echo ""
+
+if bash 05.5_check_trimming_quality.sh; then
+    echo ""
+    echo "QC check passed - downstream jobs will proceed"
+    exit 0
+else
+    echo ""
+    echo "QC check FAILED - downstream jobs will be blocked"
+    echo "Review reports and either:"
+    echo "  1. Fix trimming parameters and rerun"
+    echo "  2. Use SKIP_QC_CHECK=1 to bypass (not recommended)"
+    exit 1
+fi
+EOF
+        
+        # Replace account placeholder
+        sed -i.bak "s/ACCOUNT_PLACEHOLDER/${SLURM_ACCOUNT}/" 05.5_qc_check_wrapper.slurm
+        rm -f 05.5_qc_check_wrapper.slurm.bak
+        
+        # Submit QC check job with dependencies on both MultiQC jobs
+        DEP_JOBS=()
+        [[ "$JOB2" != "completed" ]] && DEP_JOBS+=("$JOB2")
+        [[ "$JOB5" != "completed" ]] && DEP_JOBS+=("$JOB5")
+        
+        DEP_STRING="--dependency=afterok:$(IFS=:; echo "${DEP_JOBS[*]}")"
+        JOB5_5=$(sbatch --parsable ${DEP_STRING} 05.5_qc_check_wrapper.slurm)
+        
+        echo "Step 5.5 (Quality check): Job ID $JOB5_5 (waits for ${DEP_JOBS[*]})"
+        echo "  This job will validate trimming quality and gate the alignment step"
+    fi
+fi
+
 # Submit Step 6: Build STAR index (depends on reference download, can run in parallel with QC/trimming)
 if [[ "$RESUME" == true ]] && check_step_complete 6; then
     echo "Step 6 (STAR index): ✓ ALREADY COMPLETE (skipping)"
@@ -199,15 +288,16 @@ else
     fi
 fi
 
-# Submit Step 7: STAR alignment (depends on STAR index AND trimmed reads)
+# Submit Step 7: STAR alignment (depends on STAR index, trimmed reads, AND quality validation)
 if [[ "$RESUME" == true ]] && check_step_complete 7; then
     echo "Step 7 (STAR align): ✓ ALREADY COMPLETE (skipping)"
     JOB7="completed"
 else
     DEP_STRING=""
     DEP_JOBS=()
-    [[ "$JOB6" != "completed" ]] && DEP_JOBS+=("$JOB6")
-    [[ "$JOB3" != "completed" ]] && DEP_JOBS+=("$JOB3")
+    [[ "$JOB6" != "completed" ]] && DEP_JOBS+=("$JOB6")  # STAR index
+    [[ "$JOB3" != "completed" ]] && DEP_JOBS+=("$JOB3")  # Trimmed reads
+    [[ "$JOB5_5" != "completed" ]] && DEP_JOBS+=("$JOB5_5")  # QC validation gate (replaces JOB5)
     
     if [[ ${#DEP_JOBS[@]} -gt 0 ]]; then
         DEP_STRING="--dependency=afterok:$(IFS=:; echo "${DEP_JOBS[*]}")"
@@ -290,12 +380,13 @@ fi
 
 echo "Job dependency chain:"
 echo "  Raw QC Track: FastQC raw ($JOB1) → MultiQC raw ($JOB2)"
-echo "  Trimming Track: Trimmomatic ($JOB3) → FastQC trimmed ($JOB4) → MultiQC trimmed ($JOB5)"
+echo "  Trimming Track: Trimmomatic ($JOB3) → FastQC trimmed ($JOB4) → MultiQC trimmed ($JOB5) → QC Gate ($JOB5_5)"
 echo "  Index Track: Download ref ($JOB0) → STAR index ($JOB6)"
-echo "  Alignment Track: STAR align ($JOB7, waits for $JOB6+$JOB3) → featureCounts ($JOB9) → DESeq2 ($JOB10)"
+echo "  Alignment Track: STAR align ($JOB7, waits for $JOB6+$JOB3+$JOB5_5) → featureCounts ($JOB9) → DESeq2 ($JOB10)"
 echo "  Alignment QC: STAR align ($JOB7) → MultiQC align ($JOB8)"
 echo ""
 echo "  (Note: 'completed' = skipped because already done)"
+echo "  (Note: QC Gate = quality validation job that checks trimming success)"
 echo ""
 
 # Only show monitoring commands if we actually submitted jobs
