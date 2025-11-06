@@ -11,7 +11,7 @@
 
 # Quality control of raw reads with FastQC
 
-module load fastqc/0.12.1
+module load fastqc
 
 # Set up directories
 BASE_DIR=/scratch/${USER}/BHB_complete

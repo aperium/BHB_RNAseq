@@ -85,7 +85,7 @@ echo "  - combined_genome.fa (yeast + ERCC)"
 echo "  - combined_annotation.gtf (yeast + ERCC)"
 
 # Create index for samtools
-module load samtools/1.21
+module load samtools
 echo "Creating samtools index..."
 samtools faidx combined_genome.fa
 

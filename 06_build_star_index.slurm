@@ -11,7 +11,7 @@
 
 # Build STAR genome index for S. cerevisiae + ERCC92 spike-ins
 
-module load star/2.7.11b
+module load star
 
 # Set up directories
 BASE_DIR=/scratch/${USER}/BHB_complete

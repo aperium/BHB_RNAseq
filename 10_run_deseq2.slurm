@@ -12,7 +12,7 @@
 # Run DESeq2 analysis in R
 
 # Load R module (adjust version as needed)
-module load miniforge/24.11.3-py3.12
+module load miniforge
 
 # Activate conda environment with R and DESeq2
 # Note: You may need to create this environment first

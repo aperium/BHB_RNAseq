@@ -13,7 +13,7 @@
 # Note: UVA HPC doesn't have subread as a module, so we'll use STAR's built-in counts
 # and create the count matrix from STAR GeneCounts output
 
-module load samtools/1.21
+module load samtools
 
 # Set up directories
 BASE_DIR=/scratch/${USER}/BHB_complete

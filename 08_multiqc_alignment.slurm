@@ -11,7 +11,7 @@
 
 # Aggregate STAR alignment logs with MultiQC
 
-module load multiqc/1.27.1
+module load multiqc
 
 # Set up directories
 BASE_DIR=/scratch/${USER}/BHB_complete

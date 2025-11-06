@@ -13,8 +13,8 @@
 # STAR alignment for paired-end reads
 # This is an array job - one task per sample (42 samples)
 
-module load star/2.7.11b
-module load samtools/1.21
+module load star
+module load samtools
 
 # Set up directories
 BASE_DIR=/scratch/${USER}/BHB_complete
