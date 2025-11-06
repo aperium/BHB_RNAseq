@@ -2,9 +2,9 @@
 #SBATCH --job-name=fastqc_raw
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=32G
-#SBATCH --time=4:00:00
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=40G
+#SBATCH --time=5:00:00
 #SBATCH --partition=standard
 #SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/01_fastqc_raw_%j.out
@@ -28,7 +28,7 @@ echo "Output directory: ${QC_DIR}"
 # Run FastQC on all fastq.gz files
 fastqc ${RAW_DIR}/*/*.fq.gz \
     --outdir ${QC_DIR} \
-    --threads 16
+    --threads 20
 
 echo "FastQC complete!"
 echo "Results saved to: ${QC_DIR}"

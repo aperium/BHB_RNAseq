@@ -2,9 +2,9 @@
 #SBATCH --job-name=multiqc_trimmed
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=8G
-#SBATCH --time=1:00:00
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=10G
+#SBATCH --time=1:15:00
 #SBATCH --partition=standard
 #SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/05_multiqc_trimmed_%j.out

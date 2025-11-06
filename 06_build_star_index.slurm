@@ -2,9 +2,9 @@
 #SBATCH --job-name=star_index
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=32G
-#SBATCH --time=2:00:00
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=40G
+#SBATCH --time=2:30:00
 #SBATCH --partition=standard
 #SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/03_star_index_%j.out
@@ -47,7 +47,7 @@ fi
 # ERCC adds minimal size, so same parameter is appropriate
 
 STAR --runMode genomeGenerate \
-    --runThreadN 16 \
+    --runThreadN 20 \
     --genomeDir ${INDEX_DIR} \
     --genomeFastaFiles ${GENOME_FA} \
     --sjdbGTFfile ${GTF} \

@@ -2,9 +2,9 @@
 #SBATCH --job-name=trimmomatic
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=16G
-#SBATCH --time=8:00:00
+#SBATCH --cpus-per-task=10
+#SBATCH --mem=20G
+#SBATCH --time=10:00:00
 #SBATCH --partition=standard
 #SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/03_trimmomatic_%j.out
@@ -40,7 +40,7 @@ echo "=========================================="
 echo "Raw data directory: ${RAW_DIR}"
 echo "Output directory: ${TRIMMED_DIR}"
 echo "Adapter file: ${ADAPTERS}"
-echo "Threads: 8"
+echo "Threads: 10"
 echo "=========================================="
 echo ""
 
@@ -79,7 +79,7 @@ for SAMPLE in "${SAMPLES[@]}"; do
     
     # Run Trimmomatic in paired-end mode
     echo "Running Trimmomatic..."
-    trimmomatic PE -threads 8 \
+    trimmomatic PE -threads 10 \
         ${R1} ${R2} \
         ${R1_PAIRED} ${R1_UNPAIRED} \
         ${R2_PAIRED} ${R2_UNPAIRED} \

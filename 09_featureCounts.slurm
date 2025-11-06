@@ -2,9 +2,9 @@
 #SBATCH --job-name=featureCounts
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=32G
-#SBATCH --time=2:00:00
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=40G
+#SBATCH --time=2:30:00
 #SBATCH --partition=standard
 #SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/06_featureCounts_%j.out

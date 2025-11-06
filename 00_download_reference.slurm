@@ -2,9 +2,9 @@
 #SBATCH --job-name=download_ref
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=4G
-#SBATCH --time=2:00:00
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=5G
+#SBATCH --time=2:30:00
 #SBATCH --partition=standard
 #SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/00_download_ref_%j.out

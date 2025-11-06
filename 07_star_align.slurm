@@ -2,9 +2,9 @@
 #SBATCH --job-name=star_align
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=16G
-#SBATCH --time=4:00:00
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=20G
+#SBATCH --time=5:00:00
 #SBATCH --partition=standard
 #SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --array=1-42
@@ -60,7 +60,7 @@ OUT_DIR=${ALIGN_DIR}/${SAMPLE}
 mkdir -p ${OUT_DIR}
 
 # Run STAR alignment
-STAR --runThreadN 8 \
+STAR --runThreadN 16 \
     --genomeDir ${INDEX_DIR} \
     --readFilesIn ${R1} ${R2} \
     --readFilesCommand zcat \
