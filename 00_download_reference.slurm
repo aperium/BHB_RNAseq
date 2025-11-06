@@ -6,7 +6,6 @@
 #SBATCH --mem=5G
 #SBATCH --time=2:30:00
 #SBATCH --partition=standard
-#SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/00_download_ref_%j.out
 #SBATCH --error=../logs/00_download_ref_%j.err
 

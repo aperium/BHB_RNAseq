@@ -6,7 +6,6 @@
 #SBATCH --mem=20G
 #SBATCH --time=5:00:00
 #SBATCH --partition=standard
-#SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --array=1-42
 #SBATCH --output=../logs/04_star_align_%A_%a.out
 #SBATCH --error=../logs/04_star_align_%A_%a.err

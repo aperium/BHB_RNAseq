@@ -6,7 +6,6 @@
 #SBATCH --mem=20G
 #SBATCH --time=10:00:00
 #SBATCH --partition=standard
-#SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/03_trimmomatic_%j.out
 #SBATCH --error=../logs/03_trimmomatic_%j.err
 

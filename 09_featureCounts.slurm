@@ -6,7 +6,6 @@
 #SBATCH --mem=40G
 #SBATCH --time=2:30:00
 #SBATCH --partition=standard
-#SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/06_featureCounts_%j.out
 #SBATCH --error=../logs/06_featureCounts_%j.err
 

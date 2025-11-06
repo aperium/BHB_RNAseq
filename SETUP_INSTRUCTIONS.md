@@ -115,6 +115,7 @@ conda create -y -n rnaseq_r -c conda-forge -c bioconda \
 ```bash
 chmod +x *.slurm
 chmod +x *.R
+chmod +x *.sh
 ```
 
 ## Verify Setup
@@ -155,6 +156,10 @@ Submit all jobs at once with automatic dependencies:
 # SSH into HPC and navigate to script directory
 ssh $USER@login.hpc.virginia.edu
 cd /scratch/$USER/BHB_complete/BHB_RNAseq
+
+# Update these with your User ID and UPC Account
+export HPC_ACCOUNT="your_slurm_account_name"
+export USER="your_user_ID"
 
 # Run master submission script
 bash run_full_pipeline.sh

@@ -6,7 +6,6 @@
 #SBATCH --mem=10G
 #SBATCH --time=1:15:00
 #SBATCH --partition=standard
-#SBATCH --account=${HPC_ACCOUNT:-$USER}
 #SBATCH --output=../logs/02_multiqc_raw_%j.out
 #SBATCH --error=../logs/02_multiqc_raw_%j.err
 
