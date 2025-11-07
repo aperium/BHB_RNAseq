@@ -8,6 +8,14 @@
 #SBATCH --partition=standard
 #SBATCH --output=../logs/07_deseq2_%j.out
 #SBATCH --error=../logs/07_deseq2_%j.err
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=<drw@drwilliams.bio>
+
+# Exit immediately if any command fails
+set -e
+set -u
+set -o pipefail
+
 
 # Run DESeq2 analysis in R
 
@@ -29,6 +37,6 @@ cp experimental_design.csv ${BASE_DIR}/
 
 # Run R script
 cd ${BASE_DIR}
-Rscript 07_deseq2_analysis.R
+Rscript ${BASE_DIR}/BHB_RNAseq/10_deseq2_analysis.R
 
 echo "DESeq2 analysis complete!"

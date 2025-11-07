@@ -6,8 +6,8 @@
 #SBATCH --mem=40G
 #SBATCH --time=2:30:00
 #SBATCH --partition=standard
-#SBATCH --output=../logs/06_featureCounts_%j.out
-#SBATCH --error=../logs/06_featureCounts_%j.err
+#SBATCH --output=../logs/09_featureCounts_%j.out
+#SBATCH --error=../logs/09_featureCounts_%j.err
 
 # Exit immediately if any command fails
 set -e
@@ -22,8 +22,8 @@ module load samtools
 
 # Set up directories
 BASE_DIR=/scratch/${USER}/BHB_complete
-ALIGN_DIR=${BASE_DIR}/04.Alignment
-COUNT_DIR=${BASE_DIR}/05.Counts
+ALIGN_DIR=${BASE_DIR}/05.Alignment
+COUNT_DIR=${BASE_DIR}/06.Counts
 mkdir -p ${COUNT_DIR}
 
 echo "Extracting gene counts from STAR output..."

@@ -8,6 +8,8 @@
 #SBATCH --partition=standard
 #SBATCH --output=../logs/03_trimmomatic_%j.out
 #SBATCH --error=../logs/03_trimmomatic_%j.err
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=<drw@drwilliams.bio>
 
 # Exit immediately if any command fails
 set -e

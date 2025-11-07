@@ -16,10 +16,10 @@ suppressPackageStartupMessages({
 # Set working directory - using environment variable for portability
 user_name <- Sys.getenv("USER")
 base_dir <- file.path("/scratch", user_name, "BHB_complete")
-setwd(file.path(base_dir, "05.Counts"))
+setwd(file.path(base_dir, "06.Counts"))
 
 # Create output directory
-dir.create("../06.DESeq2_results", showWarnings = FALSE)
+dir.create("../07.DESeq2_results", showWarnings = FALSE)
 
 # Load count matrix
 cat("Loading count matrix...\n")
@@ -48,7 +48,7 @@ ercc_counts <- counts[ercc_genes, , drop = FALSE]
 yeast_counts <- counts[yeast_genes, , drop = FALSE]
 
 # Save ERCC counts separately for QC
-write.csv(ercc_counts, "../06.DESeq2_results/ERCC_counts.csv", quote = FALSE)
+write.csv(ercc_counts, "../07.DESeq2_results/ERCC_counts.csv", quote = FALSE)
 
 # Calculate ERCC alignment statistics
 ercc_totals <- colSums(ercc_counts)
@@ -63,7 +63,7 @@ ercc_stats <- data.frame(
     ERCC_counts = ercc_totals,
     ERCC_percentage = ercc_percentage
 )
-write.csv(ercc_stats, "../06.DESeq2_results/ERCC_alignment_stats.csv", 
+write.csv(ercc_stats, "../07.DESeq2_results/ERCC_alignment_stats.csv", 
           row.names = FALSE, quote = FALSE)
 
 cat("\nERCC Alignment Summary:\n")
@@ -73,7 +73,7 @@ cat(sprintf("  Range: %.2f%% - %.2f%%\n",
             min(ercc_percentage), max(ercc_percentage)))
 
 # Plot ERCC percentages
-pdf("../06.DESeq2_results/ERCC_percentage_by_sample.pdf", width = 12, height = 6)
+pdf("../07.DESeq2_results/ERCC_percentage_by_sample.pdf", width = 12, height = 6)
 par(mar = c(10, 4, 4, 2))
 barplot(ercc_percentage, 
         las = 2, 
@@ -157,11 +157,11 @@ size_factor_comparison <- data.frame(
     Ratio = ercc_size_factors / standard_size_factors
 )
 write.csv(size_factor_comparison, 
-          "../06.DESeq2_results/size_factor_comparison.csv",
+          "../07.DESeq2_results/size_factor_comparison.csv",
           row.names = FALSE, quote = FALSE)
 
 # Plot comparison
-pdf("../06.DESeq2_results/size_factor_comparison.pdf", width = 10, height = 5)
+pdf("../07.DESeq2_results/size_factor_comparison.pdf", width = 10, height = 5)
 par(mfrow = c(1, 2))
 
 plot(standard_size_factors, ercc_size_factors,
@@ -192,12 +192,12 @@ dds <- estimateDispersions(dds)
 dds <- nbinomWaldTest(dds)
 
 # Save DESeq2 object
-saveRDS(dds, "../06.DESeq2_results/dds.rds")
+saveRDS(dds, "../07.DESeq2_results/dds.rds")
 
 # Get normalized counts
 normalized_counts <- counts(dds, normalized = TRUE)
 write.csv(normalized_counts, 
-          "../06.DESeq2_results/normalized_counts.csv",
+          "../07.DESeq2_results/normalized_counts.csv",
           quote = FALSE)
 
 # ========== QC Plots ==========
@@ -207,7 +207,7 @@ cat("Generating QC plots...\n")
 vsd <- vst(dds, blind = FALSE)
 
 # PCA plot
-pdf("../06.DESeq2_results/PCA_plot.pdf", width = 10, height = 8)
+pdf("../07.DESeq2_results/PCA_plot.pdf", width = 10, height = 8)
 pcaData <- plotPCA(vsd, intgroup = c("phase", "treatment"), returnData = TRUE)
 percentVar <- round(100 * attr(pcaData, "percentVar"))
 ggplot(pcaData, aes(PC1, PC2, color = treatment, shape = phase)) +
@@ -219,7 +219,7 @@ ggplot(pcaData, aes(PC1, PC2, color = treatment, shape = phase)) +
 dev.off()
 
 # Sample distance heatmap
-pdf("../06.DESeq2_results/sample_distance_heatmap.pdf", width = 12, height = 10)
+pdf("../07.DESeq2_results/sample_distance_heatmap.pdf", width = 12, height = 10)
 sampleDists <- dist(t(assay(vsd)))
 sampleDistMatrix <- as.matrix(sampleDists)
 rownames(sampleDistMatrix) <- paste(vsd$phase, vsd$treatment, vsd$replicate, sep = "_")
@@ -248,18 +248,18 @@ extract_results <- function(dds, contrast, comparison_name, alpha = 0.05) {
     
     # Save results
     write.csv(as.data.frame(res_ordered), 
-              sprintf("../06.DESeq2_results/DESeq2_%s.csv", comparison_name),
+              sprintf("../07.DESeq2_results/DESeq2_%s.csv", comparison_name),
               quote = FALSE)
     
     # MA plot
-    pdf(sprintf("../06.DESeq2_results/MA_plot_%s.pdf", comparison_name), 
+    pdf(sprintf("../07.DESeq2_results/MA_plot_%s.pdf", comparison_name), 
         width = 8, height = 6)
     plotMA(res, main = comparison_name, ylim = c(-5, 5))
     dev.off()
     
     # Volcano plot (if EnhancedVolcano is available)
     if (requireNamespace("EnhancedVolcano", quietly = TRUE)) {
-        pdf(sprintf("../06.DESeq2_results/volcano_%s.pdf", comparison_name),
+        pdf(sprintf("../07.DESeq2_results/volcano_%s.pdf", comparison_name),
             width = 10, height = 8)
         print(EnhancedVolcano(res,
                              lab = rownames(res),
@@ -356,7 +356,7 @@ for (i in seq_along(result_objects)) {
 }
 
 write.csv(summary_df, 
-          "../06.DESeq2_results/DE_summary.csv",
+          "../07.DESeq2_results/DE_summary.csv",
           row.names = FALSE,
           quote = FALSE)
 

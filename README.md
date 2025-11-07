@@ -257,7 +257,7 @@ Output: `../05.Counts/counts_matrix_unstranded.txt` (genes × samples)
 # First, set up conda environment (one-time setup, from any directory)
 module load miniforge/24.11.3-py3.12
 conda create -y -n rnaseq_r -c conda-forge -c bioconda \
-    r-base r-deseq2 r-ggplot2 r-pheatmap r-dplyr \
+    r-base bioconductor-deseq2 r-ggplot2 r-pheatmap r-dplyr \
     r-rcolorbrewer bioconductor-enhancedvolcano
 
 # Then run DESeq2 (from BHB_RNAseq directory)

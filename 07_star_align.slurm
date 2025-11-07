@@ -9,6 +9,8 @@
 #SBATCH --array=1-42
 #SBATCH --output=../logs/04_star_align_%A_%a.out
 #SBATCH --error=../logs/04_star_align_%A_%a.err
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=<drw@drwilliams.bio>
 
 # Exit immediately if any command fails
 set -e
